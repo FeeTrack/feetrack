@@ -86,7 +86,7 @@ const ToolHeader = ({pageName, profile}) => {
                     <ConfirmModal
                         isOpen={showPlanModal}
                         onClose={() => setShowPlanModal(false)}
-                        onConfirm={() => router.push('/contact-sales')}
+                        onConfirm={() => router.push('/contact')}
                         title="Plan Details"
                         buttonAction="Contact Sales"
                         message={
@@ -126,7 +126,7 @@ const ToolHeader = ({pageName, profile}) => {
                 {/* User Menu */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant='ghost' size='icon'>
+                        <Button variant='ghost' size='icon' className='rounded-full' >
                             <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                                 {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                             </div>

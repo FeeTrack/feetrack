@@ -2,8 +2,8 @@ import { CheckCircle } from "lucide-react"
 
 export default function Solution() {
     const features = [
-        "Free 7-day trial and affordable plans based on number of students.",
-        "Easy fee collection and tracking, featuruing late fee and discounts.",
+        "Free trial and affordable plans based on number of students.",
+        "Easy fee collection and tracking, featuring late fee and discounts.",
         "Modern, comprehensive and shareable payment receipts.",
         "Custom features for schools, coaching centres and colleges.",
         "User-friendly dashboard and modern UI.",        
