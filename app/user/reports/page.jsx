@@ -1,6 +1,11 @@
 import { Hourglass } from "lucide-react";
 import UserLayout from "../UserLayout";
 
+export const metadata = {
+    title: 'Reports | FeeTrack',
+    description: 'Generates reports and analysis.'
+}
+
 export default async function ReportsPage() {
     return (
         <UserLayout pageName='Reports'>

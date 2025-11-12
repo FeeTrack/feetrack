@@ -5,6 +5,11 @@ import { redirect } from 'next/navigation';
 import UserLayout from '../UserLayout';
 import StudentsClient from './StudentsClient';
 
+export const metadata = {
+    title: 'Students | FeeTrack',
+    description: 'Lists and allows to manage students.'
+}
+
 export default async function StudentsPage({searchParams}) {
     const supabase = await createServerSupabase();
     const params = await searchParams;

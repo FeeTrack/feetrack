@@ -5,6 +5,11 @@ import { redirect } from 'next/navigation';
 import UserLayout from '../../UserLayout';
 import FeesSetupClient from './FeesSetupClient';
 
+export const metadata = {
+    title: 'Fees Setup | FeeTrack',
+    description: 'The page to set up fees.'
+}
+
 export default async function FeesSetupPage() {  
   const { feeHeads, classes, error } = await fetchFeeHeadsAndClasses();
   if (error?.code === 'NO_PROFILE') {

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Download } from 'lucide-react';
+import {UilWhatsapp} from '@iconscout/react-unicons';
 
 export default function DefaultersClient({classes, sections}) {
     const customStyles = {
@@ -66,13 +67,16 @@ export default function DefaultersClient({classes, sections}) {
     const [hasSearched, setHasSearched] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const [displayFine, setDisplayFine] = useState(false);
+    const [displayDiscount, setDisplayDiscount] = useState(false);
+
     // Show error toast if there's an error
     useEffect(() => {
-        if (state?.error) {
-            toast.error(state.error);
-        } else if (state?.defaulters) {
+        if (state?.defaulters) {
             setHasSearched(true);
             setDefaulters(state.defaulters);
+        } else if (state?.error) {
+            toast.error(state.error);
         }
     }, [state]);
 
@@ -122,6 +126,24 @@ export default function DefaultersClient({classes, sections}) {
             setDefaulters(filtered);
         }
     }, [searchQuery]);
+
+    const handleSendReminder = (studentName, schoolName, mobileNo) => {
+        const message = `Dear Parent,
+
+Greetings from ${schoolName}.
+
+Your ward, ${studentName}'s fee is due. You are requested to deposit the fee at the earliest.
+
+Regards,
+${schoolName}`;
+
+    const waLink = `https://wa.me/${mobileNo}?text=${encodeURIComponent(message)}`;
+    
+    console.log('Generated URL:', waLink);
+    console.log('Message:', message);
+    
+    window.open(waLink, '_blank');
+}
 
     return (
         <div className="space-y-6">
@@ -262,10 +284,11 @@ export default function DefaultersClient({classes, sections}) {
                                             <TableHead className='border border-t-0 border-l-0'>Sr.</TableHead>
                                             <TableHead className='border border-t-0 '>Student Details</TableHead>
                                             <TableHead className='border border-t-0 '>Total</TableHead>
-                                            <TableHead className='border border-t-0 '>Fine</TableHead>
+                                            {displayFine && <TableHead className='border border-t-0 '>Fine</TableHead>}
                                             <TableHead className='border border-t-0 '>Paid</TableHead>
-                                            <TableHead className='border border-t-0 '>Discount</TableHead>
-                                            <TableHead className='border border-t-0 border-r-0'>Balance</TableHead>
+                                            {displayDiscount && <TableHead className='border border-t-0 '>Discount</TableHead>}
+                                            <TableHead className='border border-t-0 '>Balance</TableHead>
+                                            <TableHead className='border border-t-0 border-r-0'>Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -276,49 +299,68 @@ export default function DefaultersClient({classes, sections}) {
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            defaulters.map((d, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell className={`border border-l-0 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>{index + 1}</TableCell>
-                                                    <TableCell className={`p-2 border border-black ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        <div className="flex flex-col gap-1">
-                                                            <div>Name: {d?.student?.name}</div>
-                                                            <div>Class: {`${d?.student.class_name}-${d?.student?.section_name}`}</div>
-                                                            <div>Adm No: {d?.student?.adm_no}{'  '}Roll No: {d?.student?.roll_no}</div>
-                                                            <div>Mobile: {d?.student?.parent_mobile}</div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        {d?.periods.map(p => (
-                                                            <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.total}</div>
-                                                        ))}
-                                                        <div className="font-bold text-gray-700 mt-1">Total: {d?.grandTotal}</div>
-                                                    </TableCell>
-                                                    <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        {d?.periods.map(p => (
-                                                            <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.fine}</div>
-                                                        ))}
-                                                        <div className="font-bold text-gray-700 mt-1">Total: {d?.grandFine}</div>
-                                                    </TableCell>
-                                                    <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        {d?.periods.map(p => (
-                                                            <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.paid}</div>
-                                                        ))}
-                                                        <div className="font-bold text-gray-700 mt-1">Total: {d?.grandPaid}</div>
-                                                    </TableCell>
-                                                    <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        {d?.periods.map(p => (
-                                                            <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.discount}</div>
-                                                        ))}
-                                                        <div className="font-bold text-gray-700 mt-1">Total: {d?.grandDiscount}</div>
-                                                    </TableCell>
-                                                    <TableCell className={`p-2 border border-black border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
-                                                        {d?.periods.map(p => (
-                                                            <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.balance}</div>
-                                                        ))}
-                                                        <div className="font-bold text-gray-700 mt-1">Total: {d?.grandBalance}</div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
+                                            defaulters.map((d, index) => {
+                                                if (d.grandFine > 0) {
+                                                    setDisplayFine(true)
+                                                }
+
+                                                if (d.grandDiscount > 0) {
+                                                    setDisplayDiscount(true)
+                                                }
+                                                return (
+                                                    <TableRow key={index}>
+                                                        <TableCell className={`border border-l-0 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>{index + 1}</TableCell>
+                                                        <TableCell className={`p-2 border border-black ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="font-semibold">{d?.student?.name}</div>
+                                                                <div>Class: {`${d?.student.class_name}-${d?.student?.section_name}`}</div>
+                                                                <div>Adm No: {d?.student?.adm_no}{'  '}Roll No: {d?.student?.roll_no}</div>
+                                                                <div>Mobile: {d?.student?.parent_mobile}</div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            {d?.periods.map(p => (
+                                                                <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.total}</div>
+                                                            ))}
+                                                            <div className="font-bold text-gray-700 mt-1">Total: {d?.grandTotal}</div>
+                                                        </TableCell>
+                                                        {d?.grandFine > 0 && (
+                                                            <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                                {d?.periods.map(p => (
+                                                                    <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.fine}</div>
+                                                                ))}
+                                                                <div className="font-bold text-gray-700 mt-1">Total: {d?.grandFine}</div>
+                                                            </TableCell>
+                                                        )}
+                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            {d?.periods.map(p => (
+                                                                <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.paid}</div>
+                                                            ))}
+                                                            <div className="font-bold text-gray-700 mt-1">Total: {d?.grandPaid}</div>
+                                                        </TableCell>
+                                                        {d?.grandDiscount > 0 && (
+                                                            <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                                {d?.periods.map(p => (
+                                                                    <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.discount}</div>
+                                                                ))}
+                                                                <div className="font-bold text-gray-700 mt-1">Total: {d?.grandDiscount}</div>
+                                                            </TableCell>
+                                                        )}
+                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            {d?.periods.map(p => (
+                                                                <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.balance}</div>
+                                                            ))}
+                                                            <div className="font-medium text-gray-700 mt-1">Total: {d?.grandBalance}</div>
+                                                        </TableCell>
+                                                        <TableCell className={`p-2 border border-black border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            <button className="primary-btn flex items-center gap-1" onClick={() => handleSendReminder(d?.student?.name, d?.schoolName, d?.student?.parent_mobile)}>
+                                                                <UilWhatsapp size='16px'/>
+                                                                <h4>Send Reminder</h4>
+                                                            </button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
                                         )}
                                     </TableBody>
                                 </Table>

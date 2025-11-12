@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import UserLayout from '../UserLayout';
 import PaymentsClient from "./PaymentsClient";
 
+export const metadata = {
+    title: 'Payments | FeeTrack',
+    description: 'Lists the payments recorded.'
+}
+
 export default async function PaymentsPage() {
     const profile = await getUser();
     if (!profile) {

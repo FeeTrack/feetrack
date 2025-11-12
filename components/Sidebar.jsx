@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-    Home, Users, CreditCard, FileText, Settings, ChevronDown, IndianRupee
+    Home, Users, CreditCard, Settings, ChevronDown, IndianRupee
 } from "lucide-react";
 
 const navigation = [
@@ -16,7 +16,6 @@ const navigation = [
         { name: 'Defaulters', href: '/user/fees/defaulters' },
     ] },
     { name: 'Payments', href: '/user/payments', icon: CreditCard },
-    { name: 'Reports', href: '/user/reports', icon: FileText },
     { name: 'Settings', icon: Settings, submenu: [
         { name: 'Classes & Sections', href: '/user/settings/classes-sections' },
         { name: 'Fees Setup', href: '/user/settings/fees-setup' },

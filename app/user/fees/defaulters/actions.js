@@ -26,7 +26,7 @@ export async function searchDefaultersAction(prevState, formData) {
 
         let invoiceQuery = supabase
             .from('invoices')
-            .select(`id, students!inner(id, name, classes(name), sections(name), adm_no, roll_no, parent_mobile), pay_period, amount, amount_paid`)
+            .select(`id, students!inner(id, name, classes(name), sections(name), adm_no, roll_no, parent_mobile), pay_period, amount, amount_paid, schools(name)`)
             .eq('school_id', profile.school_id)
             .eq('students.class_id', classId)
             .in('pay_period', payPeriods)
@@ -47,6 +47,8 @@ export async function searchDefaultersAction(prevState, formData) {
         }
 
         const invoiceIds = invoices.map(inv => inv.id);
+
+        const schName = invoices?.[0].schools?.name;
 
         const { data: lateFees, error: lateFeeError } = await supabase
             .from('invoice_items')
@@ -121,6 +123,7 @@ export async function searchDefaultersAction(prevState, formData) {
         });
 
         const defaulters = Object.values(defaultersMap).map(item => ({
+            schoolName: schName,
             student: item.student,
             periods: item.periods,
             grandTotal: Number(item.periods.reduce((sum, p) => sum + p.total, 0)),

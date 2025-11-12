@@ -6,6 +6,11 @@ import { redirect } from 'next/navigation';
 import UserLayout from '../../UserLayout';
 import ClassesClient from './ClassesClient';
 
+export const metadata = {
+    title: 'Classes & Sections | FeeTrack',
+    description: 'The page to define classes and sections.'
+}
+
 export default async function ClassesPage() {
   const supabase = await createServerSupabase();
   const profile = await getUser();

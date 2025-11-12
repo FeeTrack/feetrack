@@ -336,24 +336,6 @@ export default function PaymentsClient({ recentPayments }) {
                                                         <button className="p-1 rounded hover:bg-red-400 hover:text-secondary-foreground transition-all duration-200" onClick={() => {setDeletePayment(p); setOpenDelete(true);}}>
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
-                                                        {deletePayment && (
-                                                            <ConfirmModal 
-                                                                isOpen={openDelete}
-                                                                onClose={() => setOpenDelete(false)}
-                                                                onConfirm={() => handleDelete(deletePayment.id, deletePayment.receipt_no)}
-                                                                action="Delete"
-                                                                message={
-                                                                <>
-                                                                    Are you sure you want to <strong>delete</strong> the payment with receipt no. "<strong>{deletePayment.receipt_no}</strong>"? This action cannot be undone.
-                                                                </>
-                                                                }
-                                                            />
-                                                        )}
-                                                        {deleting && (
-                                                            <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 transition-all duration-200">
-                                                                <Spinner size={28} />
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -365,6 +347,25 @@ export default function PaymentsClient({ recentPayments }) {
                     </CardContent>
                 </Card>
             </div>
+
+            {deletePayment && (
+                <ConfirmModal 
+                    isOpen={openDelete}
+                    onClose={() => setOpenDelete(false)}
+                    onConfirm={() => handleDelete(deletePayment.id, deletePayment.receipt_no)}
+                    action="Delete"
+                    message={
+                    <>
+                        Are you sure you want to delete the payment with receipt no. <strong>{deletePayment.receipt_no}</strong>? This action cannot be undone.
+                    </>
+                    }
+                />
+            )}
+            {deleting && (
+                <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 transition-all duration-200">
+                    <Spinner size={28} />
+                </div>
+            )}
 
             {loading && (
                 <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 transition-all duration-200">

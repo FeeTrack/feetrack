@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import ClassesFeesClient from "./ClassesFeesClient";
 import UserLayout from "../../UserLayout";
 
+export const metadata = {
+    title: 'Class-Wise Fees | FeeTrack',
+    description: "Lists school's fees in a class-wise manner."
+}
+
 export default async function ClassWiseFeesPage() {
     const { feeHeads, classes, error } = await fetchFeeHeadsAndClasses();
     if (error?.code === 'NO_PROFILE') {

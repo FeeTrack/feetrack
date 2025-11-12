@@ -23,7 +23,7 @@ export default function SignupForm() {
     const schoolTypes = [
         { value: 'preschool', label: 'Pre-school' },
         { value: 'school', label: 'School' },
-        { value: 'tuition', label: 'Tuition Centre' },
+        { value: 'tuition', label: 'Coaching Centre' },
         { value: 'college', label: 'College' },
     ]
 
