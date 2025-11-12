@@ -1,5 +1,5 @@
 'use client'
-import { Pencil, Star } from "lucide-react"
+import { Star } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
 

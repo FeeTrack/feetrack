@@ -1,5 +1,4 @@
 import Link from "next/link"
-import Image from "next/image"
 
 import { UilLinkedin } from '@iconscout/react-unicons'
 import { UilGlobe } from '@iconscout/react-unicons'

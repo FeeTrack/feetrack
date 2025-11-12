@@ -15,7 +15,7 @@ export default function SignupForm() {
         profileName: "",
         schoolType: "",
         mobileNo: "",
-        email: "",
+        emailUserName: "",
         password: "",
         confirmPassword: ""
     })
@@ -46,11 +46,11 @@ export default function SignupForm() {
             errors.mobileNo = "Please enter the mobile number"
         }
         
-        // Email validation
-        if (!formData.email) {
-            errors.email = "Email is required"
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            errors.email = "Email is invalid"
+        // emailUserName validation
+        if (!formData.emailUserName) {
+            errors.emailUserName = "emailUserName is required"
+        } else if (!/\S+@\S+\.\S+/.test(formData.emailUserName)) {
+            errors.emailUserName = "emailUserName is invalid"
         }
         
         // Password validation
@@ -183,12 +183,12 @@ export default function SignupForm() {
                         <input 
                             name="emailUserName" 
                             type="email"
-                            value={formData.email} 
+                            value={formData.emailUserName} 
                             onChange={handleChange} 
                             className="w-full text-sm border border-gray-300 rounded-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary" 
                         />
-                        {clientErrors.email && (
-                            <p className="text-red-600 text-xs mt-1">{clientErrors.email}</p>
+                        {clientErrors.emailUserName && (
+                            <p className="text-red-600 text-xs mt-1">{clientErrors.emailUserName}</p>
                         )}
                     </div>
                     <div>
