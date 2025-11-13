@@ -355,7 +355,7 @@ ${schoolName}`;
                                                         <TableCell className={`p-2 border border-black border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             <button className="primary-btn flex items-center gap-1" onClick={() => handleSendReminder(d?.student?.name, d?.schoolName, d?.student?.parent_mobile)}>
                                                                 <UilWhatsapp size='16px'/>
-                                                                <h4>Send Reminder</h4>
+                                                                <h4><span className="hidden md:inline">Send </span>Reminder</h4>
                                                             </button>
                                                         </TableCell>
                                                     </TableRow>

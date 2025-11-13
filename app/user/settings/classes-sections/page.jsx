@@ -1,4 +1,3 @@
-'use server';
 import { createServerSupabase } from '@/utils/supabase/server';
 import { getUser } from '@/utils/supabase/supabaseQueries';
 import { redirect } from 'next/navigation';

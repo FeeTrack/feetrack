@@ -1,5 +1,3 @@
-'use server'
-
 import UserLayout from "../../UserLayout";
 import CollectFeesClient from "./CollectFeesClient";
 

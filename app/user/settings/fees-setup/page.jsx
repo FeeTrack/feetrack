@@ -1,4 +1,3 @@
-// app/dashboard/fee_heads/page.jsx
 import { fetchFeeHeadsAndClasses } from '@/utils/supabase/supabaseQueries';
 import { redirect } from 'next/navigation';
 
