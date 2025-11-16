@@ -334,7 +334,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           <h1 className="text-lg font-semibold mb-4">{hasFilteredStudents ? 'Search Results' : 'Recent Admissions'}</h1> {/* If not filter, then Recent Admissions */}
 
           {/* Table */}
-          <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto'>
+          <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 {hasFilteredStudents && (

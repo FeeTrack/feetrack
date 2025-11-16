@@ -41,8 +41,8 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
     }, [clsQuery])
 
     return (
-        <div>
-            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto'>
+        <div> {/* Redevelop without this problematic Card */}
+            <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1 sm:flex-initial">

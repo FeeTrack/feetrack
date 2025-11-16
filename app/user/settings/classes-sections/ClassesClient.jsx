@@ -97,7 +97,7 @@ export default function ClassesClient({ classes: initial }) {
       <div className='w-full flex flex-col'>
         {classes ? (
           <>
-            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto'>
+            <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-initial">

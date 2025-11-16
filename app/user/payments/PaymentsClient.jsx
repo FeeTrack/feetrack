@@ -247,7 +247,7 @@ export default function PaymentsClient({ recentPayments }) {
                     <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
                         <div className="flex flex-col gap-2 justify-start">
                             <label htmlFor="from_date" className="font-semibold">From</label>
-                            <input type="date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} min={currentSession?.start_date} max={currentSession?.end_date} />
+                            <input type="date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} />
                         </div>
 
                         <div className="flex flex-col gap-2 justify-start">
@@ -272,7 +272,7 @@ export default function PaymentsClient({ recentPayments }) {
                 <h1 className="text-lg font-semibold mb-4">{ hasFilteredPayments ? 'Search Results' : 'Recent Payments'}</h1>
 
                 {/* Table */}
-                <Card>
+                <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             {hasFilteredPayments && (

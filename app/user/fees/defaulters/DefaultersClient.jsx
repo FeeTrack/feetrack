@@ -80,6 +80,16 @@ export default function DefaultersClient({classes, sections}) {
         }
     }, [state]);
 
+    useEffect(() => {
+        if (!defaulters) return;
+
+        const hasFine = defaulters.some(d => d.grandFine > 0);
+        const hasDiscount = defaulters.some(d => d.grandDiscount > 0);
+
+        setDisplayFine(hasFine);
+        setDisplayDiscount(hasDiscount);
+    }, [defaulters]);
+
     const monthOptions = months.map(month => ({
         label: month.name,
         value: month.number <= 3 ? `${month.name}-${sessionStartYear + 1}` : `${month.name}-${sessionStartYear}` // Add session awareness
@@ -253,7 +263,7 @@ ${schoolName}`;
                 <h1 className="text-lg font-semibold mb-4">{state?.defaulters && 'Search Results'}</h1>
 
                 {hasSearched ? (
-                    <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto'>
+                    <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
                         <CardHeader>
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <CardDescription>
@@ -300,13 +310,6 @@ ${schoolName}`;
                                             </TableRow>
                                         ) : (
                                             defaulters.map((d, index) => {
-                                                if (d.grandFine > 0) {
-                                                    setDisplayFine(true)
-                                                }
-
-                                                if (d.grandDiscount > 0) {
-                                                    setDisplayDiscount(true)
-                                                }
                                                 return (
                                                     <TableRow key={index}>
                                                         <TableCell className={`border border-l-0 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>{index + 1}</TableCell>
@@ -324,7 +327,7 @@ ${schoolName}`;
                                                             ))}
                                                             <div className="font-bold text-gray-700 mt-1">Total: {d?.grandTotal}</div>
                                                         </TableCell>
-                                                        {d?.grandFine > 0 && (
+                                                        {displayFine && (
                                                             <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                                 {d?.periods.map(p => (
                                                                     <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.fine}</div>
@@ -338,7 +341,7 @@ ${schoolName}`;
                                                             ))}
                                                             <div className="font-bold text-gray-700 mt-1">Total: {d?.grandPaid}</div>
                                                         </TableCell>
-                                                        {d?.grandDiscount > 0 && (
+                                                        {displayDiscount && (
                                                             <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                                 {d?.periods.map(p => (
                                                                     <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.discount}</div>
@@ -350,7 +353,7 @@ ${schoolName}`;
                                                             {d?.periods.map(p => (
                                                                 <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.balance}</div>
                                                             ))}
-                                                            <div className="font-medium text-gray-700 mt-1">Total: {d?.grandBalance}</div>
+                                                            <div className="font-bold text-gray-700 mt-1">Total: {d?.grandBalance}</div>
                                                         </TableCell>
                                                         <TableCell className={`p-2 border border-black border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             <button className="primary-btn flex items-center gap-1" onClick={() => handleSendReminder(d?.student?.name, d?.schoolName, d?.student?.parent_mobile)}>

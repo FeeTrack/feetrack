@@ -2,13 +2,16 @@
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
 import { createStudentAction } from './actions';
+import { useSession } from '../../../Context/SessionContext'
 
-export default function AddStudentForm({ onSubmit, onCancel, classes, sections, admNo, schoolType, currentSession }) {
+export default function AddStudentForm({ onSubmit, onCancel, classes, sections, admNo, schoolType }) {
   const [state, formAction, pending] = useActionState(createStudentAction, { error: null });
 
   const [filteredSections, setFilteredSections] = useState([]);
   
   const today = new Date().toISOString().split('T')[0];
+
+  const { currentSession } = useSession();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -83,7 +86,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
 
             <div>
               <label className="block text-sm mb-1">Admission Date</label>
-              <input name="adm_date" type='date' className="w-full border rounded px-2 py-1" value={formData.adm_date || ''} onChange={handleChange} min={currentSession.start_date} max={currentSession.end_date} />
+              <input name="adm_date" type='date' className="w-full border rounded px-2 py-1" value={formData.adm_date || ''} onChange={handleChange} />
             </div>
 
             <div>
