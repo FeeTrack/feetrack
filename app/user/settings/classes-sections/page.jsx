@@ -24,7 +24,7 @@ export default async function ClassesPage() {
     .order('name');
 
   return (
-    <UserLayout pageName='Classes & Sections'>
+    <UserLayout pageName='Classes'>
       <ClassesClient classes={classes ?? []} />;
     </UserLayout>
   );

@@ -38,7 +38,7 @@ const ToolHeader = ({pageName, profile}) => {
     };
 
     return (
-        <header className="sticky top-0 flex h-16 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-2 shadow-sm xs:px-4 lg:px-8 z-10 ">
+        <header className="sticky top-0 flex h-16 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-4 shadow-sm sm:px-6 lg:px-8 z-10 ">
             <div className="flex items-center gap-x-2 xs:gap-x-4">
                 <button type="button" className='lg:hidden' onClick={() => setIsSheetOpen(true)}>
                     <Menu className="h-5 w-5"/>
@@ -107,8 +107,8 @@ const ToolHeader = ({pageName, profile}) => {
                 {/* User Menu */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className='rounded-full size-6 xs:size-9 bg-transparent hover:bg-secondary flex items-center justify-center'>
-                            <div className="rounded-full size-5 xs:size-8 text-xs xs:text-sm bg-primary text-primary-foreground flex justify-center items-center">
+                        <button className='rounded-full size-7 xs:size-9 bg-transparent hover:bg-secondary flex items-center justify-center'>
+                            <div className="rounded-full size-6 xs:size-8 text-xs xs:text-sm bg-primary text-primary-foreground flex justify-center items-center">
                                 {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                             </div>
                         </button>
