@@ -207,7 +207,7 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
         console.error('Failed to fetch payment details for printing' + (payload?.error || res.statusText));
         return;
       } 
-      await downloadReceipt(payload);
+      downloadReceipt(payload).catch(e => console.error('Print error:', e));
     } catch (e) {
       console.error('print error', e);
     }
@@ -295,9 +295,7 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
     if (data?.paymentId) {
       await handlePostPayment(data.paymentId);
 
-      setTimeout(() => {
-        onCancel();
-      }, 500);
+      onCancel();
     } else {
       onCancel();
     }
@@ -434,6 +432,7 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
 
         <div className='p-2 mt-4 flex justify-end gap-2'>
           <button
+            type='button'
             onClick={onCancel}
             className="primary-btn bg-gray-200 hover:bg-gray-300 text-black"
           >

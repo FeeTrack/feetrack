@@ -28,9 +28,9 @@ function ConfirmModal({ isOpen, onClose, onConfirm, action, message, title, butt
     <div
         className={`${
             animate ? 'opacity-100' : 'opacity-0'
-        } fixed inset-0 bg-black/50 flex items-center justify-center z-50 transition-opacity duration-300`}
+        } fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50 transition-opacity duration-300`}
     >
-      <div className="bg-white text-black rounded-2xl shadow-xl w-96">
+      <div className="bg-white text-black rounded-2xl shadow-xl w-full md:w-96">
         <div className="w-full pl-4 pt-2 pb-2 flex border-b">
           <h2 className="text-lg font-semibold">{title ? title : `Confirm ${action}`}</h2>
         </div>

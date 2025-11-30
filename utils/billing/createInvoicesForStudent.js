@@ -295,6 +295,97 @@ export async function createInvoicesForStudent({student, currentSession}) {
         console.log(`Applied ${appliedLateFees.length} late fee(s) for student ${student.id}`);
     }
 
+    // Add transport invoices if availed
+    if (student.route_id) {
+        const {data: route, routeError} = await supabase
+            .from('transport_routes')
+            .select('monthly_fee')
+            .eq('school_id', profile.school_id)
+            .eq('id', student.route_id)
+            .single();
+        if (routeError) {
+            return { error: 'Error fetching transport route: ' + routeError.message }
+        }
+
+        const {data: transFeeHeadId, error: headError} = await supabase
+            .from('fee_heads')
+            .select('id')
+            .eq('school_id', profile.school_id)
+            .eq('name', 'Transport Fee')
+            .single();
+        if (headError) {
+            return { error: 'Error fetching transport fee head: ' + headError.message}
+        }
+
+        const transportInvItemsPayloads = []
+
+        if (student.month_fee_from === 'adm_date') {
+            const admDate = new Date(student.adm_date + 'T12:00:00'); // avoid timezone issues
+            
+            // session end = last day of Mar of next year
+            const sessionEndDate = new Date(sessionStartYear + 1, 3, 0); // Mar last day (month 3, day 0)
+
+            // If admission is before session start, start from session start (optional / usually desired)
+            let currentPeriodStart = new Date(admDate);
+
+            while (currentPeriodStart <= sessionEndDate) {
+                const nextPeriodStart = addMonthsPreserveDay(currentPeriodStart, 1);
+
+                const monthNumber = currentPeriodStart.getMonth() + 1; // 1..12
+                // find month name from your months array (safe mapping)
+                const monthObj = months.find(m => m.number === monthNumber);
+                const monthName = monthObj.name;
+
+                const periodKey = monthToPeriodKey(monthName, monthNumber);
+                const payPeriod = periodKey;
+
+                // create invoice item payload
+                transportInvItemsPayloads.push({
+                    student_id: student.id,
+                    fee_head_id: transFeeHeadId.id,
+                    amount: route.monthly_fee,
+                    period_key: periodKey,
+                    pay_period: payPeriod,
+                });
+
+                // advance
+                currentPeriodStart = nextPeriodStart;
+            }
+
+        } else if (student.month_fee_from === 'session_start') {
+            for (const month of months) {
+                const periodKey = monthToPeriodKey(month.name, month.number);
+                const payPeriod = periodKey;
+
+                // create invoice item payload
+                transportInvItemsPayloads.push({
+                    student_id: student.id,
+                    fee_head_id: transFeeHeadId.id,
+                    amount: route.monthly_fee,
+                    period_key: periodKey,
+                    pay_period: payPeriod,
+                });
+            }
+        }
+
+        const finalTransInvItemsPayloads = transportInvItemsPayloads.map(item => {
+            const invoiceId = invoiceIdMap.get(item.pay_period);
+            return {
+                ...item,
+                invoice_id: invoiceId
+            }
+        })
+
+        const {error: transInvItemInsertErr} = await supabase
+            .from('invoice_items')
+            .insert(finalTransInvItemsPayloads);
+
+        if (transInvItemInsertErr) {
+            return { error: 'Error inserting transport invoice items: ' + transInvItemInsertErr.message}
+        }
+
+    }
+
     // Recompute total amounts for affected invoices
     const uniqueInvoiceIds = invoices.map(i => i.id);
 

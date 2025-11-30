@@ -35,7 +35,7 @@ export default async function StudentsPage({searchParams}) {
     
     const { data: recentAdmissions } = await supabase
       .from('students')
-      .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from')
+      .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from, route_id')
       .eq('school_id', profile.school_id)
       .eq('session_id', currentSession?.id)
       .order("created_at", { ascending: false })

@@ -30,7 +30,7 @@ export default async function DefaultersPage() {
         .eq('school_id', profile.school_id);
 
     return (
-        <UserLayout pageName='Fee Defaulters'>
+        <UserLayout pageName='Defaulters'>
             <DefaultersClient
                 classes={classes || []}
                 sections={sections || []}

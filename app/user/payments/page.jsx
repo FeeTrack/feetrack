@@ -34,7 +34,7 @@ export default async function PaymentsPage() {
     
     return (
         <UserLayout pageName='Payments'>
-            <PaymentsClient recentPayments={recentPayments} />
+            <PaymentsClient profile={profile} recentPayments={recentPayments} />
         </UserLayout>
     );
 }

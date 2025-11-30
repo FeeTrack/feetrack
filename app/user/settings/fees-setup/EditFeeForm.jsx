@@ -142,6 +142,7 @@ export default function EditFeeForm({ classes = [], fee, onSubmit, onCancel }) {
 
         <div className='px-2 py-2 flex justify-end gap-2'>
           <button
+            type='button'
             onClick={onCancel}
             className="primary-btn bg-gray-200 hover:bg-gray-300 text-black"
           >

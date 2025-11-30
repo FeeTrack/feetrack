@@ -4,7 +4,8 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-    Home, Users, CreditCard, Settings, ChevronDown, IndianRupee
+    Home, Users, CreditCard, Settings, ChevronDown, IndianRupee,
+    WalletCards, UserSquare,
 } from "lucide-react";
 
 const navigation = [
@@ -16,9 +17,13 @@ const navigation = [
         { name: 'Defaulters', href: '/user/fees/defaulters' },
     ] },
     { name: 'Payments', href: '/user/payments', icon: CreditCard },
+    { name: 'Expenses', href: '/user/expenses', icon: WalletCards },
+    { name: 'Staff', adminOnly: true, href: '/user/staff', icon: UserSquare },
     { name: 'Settings', icon: Settings, submenu: [
         { name: 'Classes & Sections', href: '/user/settings/classes-sections' },
-        { name: 'Fees Setup', href: '/user/settings/fees-setup' },
+        { name: 'Fees Setup', adminOnly: true, href: '/user/settings/fees-setup' },
+        { name: 'Transport', adminOnly: true, href: '/user/settings/transport' },
+        { name: 'Expense Types', href: '/user/settings/expense-types' },
     ] },
 ]
 
@@ -34,12 +39,14 @@ function Sidebar({ handleMobileClick, mobile, profile }) {
     }
 
     return (
-        <aside className="flex h-full flex-col gap-y-6 bg-primary px-4 py-6">
-            <Link href='/' className="text-base font-bold text-center text-gray-50 italic">
-                FeeTrack
-            </Link>
+        <aside className="sidebar w-full h-full max-h-screen flex flex-col gap-y-4 overflow-y-auto bg-primary px-4 pb-10">
+            <div className="w-full h-16 flex shrink-0 justify-center items-center">
+                <Link href='/' className="text-base font-bold text-gray-50 italic">
+                    FeeTrack
+                </Link>
+            </div>
 
-            <div className="flex h-16 w-full shrink-0 items-center mt-4">
+            <div className="flex h-16 w-full shrink-0 items-center">
                 <h1 className="text-xl font-bold text-primary-foreground text-center w-full">
                     {profile?.schools?.name || '[School]'}
                 </h1>
@@ -47,7 +54,8 @@ function Sidebar({ handleMobileClick, mobile, profile }) {
 
             <nav className="flex flex-1 flex-col">
                 <ul className="flex flex-1 flex-col gap-y-1">
-                    {navigation.map(item => {
+                    {navigation.filter(n => !n.adminOnly || profile.role === 'admin')
+                    .map(item => {
                         if (item.submenu) {
                             const isExpanded = expandedMenu === item.name;
                             return (
@@ -59,8 +67,8 @@ function Sidebar({ handleMobileClick, mobile, profile }) {
                                         </span>
                                         <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                     </button>
-                                    <ul className={`ml-9 mt-1 space-y-1 transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        {item.submenu.map(sub => (
+                                    <ul className={`ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-96 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                                        {item.submenu.filter(s => !s.adminOnly || profile.role === 'admin').map(sub => (
                                             <li key={sub.name}>
                                                 <Link href={sub.href} onClick={() => (mobile ? handleMobileClick() : '')} className={`sidebar-item ${pathname === sub.href ? 'sidebar-item-active' : 'sidebar-item-inactive'}`}>
                                                     {sub.name}

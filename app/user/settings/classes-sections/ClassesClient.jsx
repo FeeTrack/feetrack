@@ -97,7 +97,7 @@ export default function ClassesClient({ classes: initial }) {
       <div className='w-full flex flex-col'>
         {classes ? (
           <>
-            <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
+            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-initial">
@@ -115,10 +115,10 @@ export default function ClassesClient({ classes: initial }) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className='rounded-md border'>
+                <div className='rounded-md border border-gray-300'>
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className='border-gray-300'>
                         <TableHead>Sr.</TableHead>
                         <TableHead>Class</TableHead>
                         <TableHead>Sections</TableHead>
@@ -127,14 +127,14 @@ export default function ClassesClient({ classes: initial }) {
                     </TableHeader>
                     <TableBody>
                       {classes.length === 0 ? (
-                        <TableRow>
+                        <TableRow className='border-gray-300'>
                           <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
                             No classes yet.
                           </TableCell>
                         </TableRow>
                       ) : (
                         classes.map((cls, index) => (
-                          <TableRow key={cls.id}>
+                          <TableRow key={cls.id} className='border-gray-300'>
                             <TableCell>{index + 1}</TableCell>
                             <TableCell>{cls.name}</TableCell>
                             <TableCell>

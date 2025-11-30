@@ -345,10 +345,8 @@ export default function EditPaymentForm({ payment, student, onCancel, payPeriods
     if (data?.paymentId) {
       await handlePostPayment(data.paymentId);
 
-      setTimeout(() => {
-        onCancel();
-        router.refresh();
-      }, 1000);
+      onCancel();
+      router.refresh();
     } else {
       onCancel();
       router.refresh();
@@ -487,6 +485,7 @@ export default function EditPaymentForm({ payment, student, onCancel, payPeriods
 
         <div className='p-2 mt-4 flex justify-end gap-2'>
           <button
+            type='button'
             onClick={onCancel}
             className="primary-btn bg-gray-200 hover:bg-gray-300 text-black"
           >

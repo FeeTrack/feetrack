@@ -48,7 +48,9 @@ export function buildReceiptHtml(paymentData) {
   const itemsHtml = items.map((item, index) => 
     `<tr>
         <td>${index + 1}</td>
-        <td>${item.is_late_fee ? `Late Fee - ${item.fee_head_name}` : `${item.fee_head_name}`}</td>
+        <td>${item.is_late_fee ? `Late Fee - ${item.fee_head_name}` : `${item.fee_head_name}`}
+          <span class='period_start_end'>${(item.period_start && !item.is_late_fee) ? `(${item.period_start} - ${item.period_end})` : ''}</span>
+        </td>
         <td>${item.period_key || '-'}</td>
         <td>${item.amount}</td>
         <td>${item.discount}</td>
@@ -209,6 +211,11 @@ export function buildReceiptHtml(paymentData) {
     .payment-table td:nth-child(2) {
       text-align: left;
       padding-left: 8px;
+    }
+
+    .period_start_end {
+      font-style: italic;
+      font-size: 10px;
     }
 
     td.totalsTd {
@@ -430,24 +437,6 @@ export function buildReceiptHtml(paymentData) {
   `;
 }
 
-// Print receipt HTML
-// export function printHtmlReceipt(html) {
-//   const printWindow = window.open('', '_blank');
-//   if (!printWindow) {
-//     alert('Please allow popups to print the receipt');
-//     return;
-//   }
-  
-//   printWindow.document.write(html);
-//   printWindow.document.close();
-  
-//   // Wait for content to load, then print
-//   printWindow.onload = function() {
-//     printWindow.focus();
-//     printWindow.print();
-//   };
-// }
-
 // BEST SOLUTION: Works perfectly on both Desktop & Mobile
 export async function downloadReceipt(paymentData) {
   // Check if mobile
@@ -490,7 +479,6 @@ function openPrintDialog(paymentData) {
   
   printWindow.onload = function() {
     printWindow.focus();
-    setTimeout(() => printWindow.print(), 250);
   };
   
   return Promise.resolve('print-dialog-opened');

@@ -2,9 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
 import { createStudentAction } from './actions';
-import { useSession } from '../../../Context/SessionContext'
 
-export default function AddStudentForm({ onSubmit, onCancel, classes, sections, admNo, schoolType }) {
+import Select from 'react-select';
+import { useSession } from '../../../Context/SessionContext';
+
+export default function AddStudentForm({ onSubmit, onCancel, classes, sections, admNo, schoolType, transportRoutes }) {
   const [state, formAction, pending] = useActionState(createStudentAction, { error: null });
 
   const [filteredSections, setFilteredSections] = useState([]);
@@ -21,7 +23,8 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
     father_name: "",
     mother_name: "",
     parent_mobile: "",
-    adm_date: today
+    adm_date: today,
+    availTransport: false
   });
 
   const handleChange = (e) => {
@@ -30,6 +33,15 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
       [e.target.name]: e.target.value
     });
   }
+
+  const routeOptions = transportRoutes?.map(route => ({
+    label: route.name,
+    value: route.id
+  }))
+
+  const [selectedRoute, setSelectedRoute] = useState(null)
+
+  const routeFee = transportRoutes.find(route => route.id === selectedRoute?.value)?.monthly_fee || null;
   
   useEffect(() => {
     setFilteredSections(
@@ -39,7 +51,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
 
   useEffect(() => {
     if (state?.status === 'success') {
-      setFormData({ name: "", class: "", section: "", roll_no: "", father_name: '', mother_name: '', parent_mobile: "", adm_date: today });
+      setFormData({ name: "", class: "", section: "", roll_no: "", father_name: '', mother_name: '', parent_mobile: "", adm_date: today, availTransport: false });
     }
     onSubmit(state);
   }, [state]);
@@ -81,7 +93,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
 
             <div>
               <label className="block text-sm mb-1">Admission No</label>
-              <input name="adm_no" className="w-full border read-only:text-[#888] rounded px-2 py-1" value={state?.student?.adm_no ? state.student.adm_no + 1 : admNo} readOnly />
+              <input name="adm_no" className="w-full border read-only:text-[#888] rounded px-2 py-1" value={state?.student?.adm_no ? parseInt(state.student.adm_no) + 1 : admNo} readOnly />
             </div>
 
             <div>
@@ -108,6 +120,52 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
               <label className="block text-sm mb-1">Parent's Contact</label>
               <input name="parent_mobile" type='tel' pattern='[0-9]{10}' className="w-full border rounded px-2 py-1" required value={formData.parent_mobile} onChange={handleChange} />
             </div>
+
+            <div>
+              <label className='flex items-center gap-1 text-sm ml-1'>
+                <input type='checkbox' name='avail_transport' checked={formData.availTransport} onChange={(e) => {setFormData(prev => ({...prev, availTransport: e.target.checked})); setSelectedRoute(null)}} />
+                <p>Avail Transport</p>
+              </label>
+            </div>
+
+            {formData.availTransport && (
+              <div>
+                <label className='block text-sm mb-1'>Transport Route</label>
+                <div className="w-full px-1">
+                  <Select
+                    styles={{
+                      control: (base) => ({
+                      ...base,
+                      width: '100%',
+                      }),
+                      container: (base) => ({
+                      ...base,
+                      width: '100%'
+                      }),
+                      menuList: (base) => ({
+                          ...base,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                      }),
+                    }}
+                    instanceId='transport-route-select'
+                    options={routeOptions}
+                    value={selectedRoute}
+                    onChange={setSelectedRoute}
+                    placeholder="Select Route"
+                    isClearable
+                  />
+                  <input type="hidden" name="routeId" value={selectedRoute?.value || ''} />
+                </div>
+              </div>
+            )}  
+
+            {routeFee && (
+              <div>
+                <label className="block text-sm mb-1">Route's Monthly Fee</label>
+                <input disabled value={routeFee} className='w-full border rounded px-2 py-1 disabled:bg-gray-100'></input>
+              </div>
+            )}
 
             <div className='flex items-center gap-6 text-sm'>
               <div>
@@ -136,6 +194,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
             
             <div className='px-2 py-2 flex justify-end gap-2'>
               <button
+                type='button'
                 onClick={onCancel}
                 className="primary-btn bg-gray-200 hover:bg-gray-300 text-black"
               >

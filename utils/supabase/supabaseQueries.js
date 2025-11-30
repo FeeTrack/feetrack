@@ -9,7 +9,7 @@ export const getUser = cache(async () => {
 
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, name, school_id, schools(name, plan, valid_till)')
+        .select('id, name, school_id, role, schools(name, plan, valid_till)')
         .eq('id', userData.user.id)
         .single();
     if (!profile) {

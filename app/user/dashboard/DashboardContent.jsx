@@ -128,19 +128,25 @@ export default function DashboardContent({profile}) {
             title: 'Add Student',
             icon: Plus,
             href: { pathname: '/user/students', query: { showAdd: true } },
-            color: 'border-purple-200 hover:border-purple-400',
+            color: 'border-purple-300 hover:border-purple-500',
         },
         {
             title: 'Collect Fees',
-            icon: CreditCard,
+            icon: IndianRupee,
             href: '/user/fees/collect',
-            color: 'border-amber-200 hover:border-amber-400',
+            color: 'border-amber-300 hover:border-amber-500',
         },
         {
             title: 'View Defaulters',
             icon: AlertCircle,
             href: '/user/fees/defaulters',
-            color: 'border-red-200 hover:border-red-400',
+            color: 'border-red-300 hover:border-red-500',
+        },
+        {
+            title: 'Recent Payments',
+            icon: CreditCard,
+            href: '/user/payments',
+            color: 'border-indigo-300 hover:border-indigo-500',
         },
     ]
 
@@ -151,20 +157,20 @@ export default function DashboardContent({profile}) {
             {/* Stats */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 {statCards.map((stat, index) => (
-                    <Card key={index} className='hover:shadow-md transition-shadow'>
-                        <CardHeader className='flex flex-row items-center justify-between'>
-                            <CardTitle className='font-medium text-muted-foreground'>
+                    <Card key={index} className='shadow-md border-gray-300'>
+                        <CardHeader className='flex flex-row-reverse md:flex-row items-center justify-end gap-2 md:justify-between '>
+                            <CardTitle className='font-medium text-gray-800'>
                                 {stat.title}
                             </CardTitle>
 
-                            <div className={`${stat.color} p-2 rounded-lg`}>
+                            <div className={`${stat.color} rounded-lg`}>
                                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
                             </div>
                         </CardHeader>
 
                         <CardContent className='flex flex-col items-center'>
-                            <div className="text-2xl font-bold">{stat.value}</div>
-                            <p className="text-xs text-muted-foreground mt-1 font-medium">{stat.description}</p>
+                            <div className="text-lg md:text-2xl font-bold">{stat.value}</div>
+                            <p className="text-xs text-muted-foreground mt-1 font-medium text-center">{stat.description}</p>
                         </CardContent>
                     </Card>
                 ))}
@@ -173,11 +179,11 @@ export default function DashboardContent({profile}) {
             {/* Quick Actions */}
             <div>
                 <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-                <div className="grid gap-4 grid-cols-3 items-stretch">
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 items-stretch">
                     {quickActions.map((action, index) => (
                         <Link key={index} href={action.href}>
-                            <Card className={`h-full border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${action.color}`}>
-                                <CardContent className='flex flex-col items-center justify-center p-2 md:p-6 text-center'>
+                            <Card className={`h-full border-1 cursor-pointer transition-all duration-200 hover:shadow-md ${action.color}`}>
+                                <CardContent className='flex flex-col items-center justify-center sm:p-2 md:p-6 text-sm text-center'>
                                     <div className="bg-primary/10 p-3 rounded-full mb-3">
                                         <action.icon className="h-5 w-5 text-primary" />
                                     </div>

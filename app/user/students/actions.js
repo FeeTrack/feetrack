@@ -37,6 +37,9 @@ export async function createStudentAction(prevState, formData) {
   if (isNaN(adm_date)) return { error: 'Invalid admission date.' };
   adm_date = adm_date.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
+  const route_id = formData.get('routeId') || null;
+  console.log(route_id)
+
   const month_fee_from = String(formData.get('month_fee_from') ?? '').trim();
   if (!month_fee_from) return { error: 'Please select when to apply monthly fees from.' };
 
@@ -73,6 +76,7 @@ export async function createStudentAction(prevState, formData) {
       adm_date,
       month_fee_from,
       type: 'new',
+      route_id
     })
     .select()
     .single();
@@ -121,6 +125,8 @@ export async function updateStudentAction(prevState, formData) {
   if (isNaN(adm_date)) return { error: 'Invalid admission date.' };
   adm_date = adm_date.toISOString().slice(0, 10);
 
+  const route_id = formData.get('routeId') || null;
+
   // update student with server-side school_id (prevents tampering)
   const { data, error } = await supabase
     .from('students')
@@ -133,6 +139,7 @@ export async function updateStudentAction(prevState, formData) {
       mother_name: mother_name || null,
       parent_mobile: parent_mobile || null,
       adm_date,
+      route_id
     })
     .eq('id', studentId)
     .select()
@@ -143,7 +150,7 @@ export async function updateStudentAction(prevState, formData) {
   }
 
   revalidatePath('/user/students');
-  return { student: data, status: 'success', message: `Successfully Edited Student: ${data.name}` };
+  return { student: data, status: 'success', message: `Successfully updated student: ${data.name}` };
 }
 
 export async function leftOutStudentAction(studentId) {
@@ -179,7 +186,7 @@ export async function filterStudentsAction(prevState, formData) {
 
   const studentsQuery = supabase
     .from('students')
-    .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from')
+    .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from, route_id')
     .eq('school_id', profile.school_id)
     .eq('session_id', currentSessionId)
     .eq('class_id', classId);

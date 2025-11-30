@@ -1,12 +1,6 @@
 /* app/globals.css - Tailwind v4 Purple Theme */
 @import "tailwindcss";
 
-.sample {
-  font-size: large;
-  color: #06b6d4;
-  background-color: oklch(70.5% .213 47.604);
-}
-
 @theme {
   /* Colors - Purple Theme */
   --color-primary: #7c3aed;
@@ -30,6 +24,8 @@
   --radius-lg: 0.5rem;
   --radius-md: 0.375rem;
   --radius-sm: 0.25rem;
+
+  --breakpoint-xs: 375px;
 }
 
 @keyframes slide-fade-in {
@@ -133,4 +129,22 @@ input[type=number] {
 
 .headerScroll {
     box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* For Chrome, Edge, Safari */
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--color-secondary);
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: #6040a9;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -102,7 +102,7 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
       <div className='w-full flex flex-col'>
         {feeHeads ? (
           <>
-            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto'>
+            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 sm:flex-initial">
@@ -120,10 +120,10 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
                 </div>
               </CardHeader>
               <CardContent>
-                <div className='rounded-md border'>
+                <div className='rounded-md border border-gray-300'>
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className='border-gray-300'>
                         <TableHead>Sr.</TableHead>
                         <TableHead>Fee Type</TableHead>
                         <TableHead>Class Wise Amount</TableHead>
@@ -132,14 +132,14 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
                     </TableHeader>
                     <TableBody>
                       {feeHeads.length === 0 ? (
-                        <TableRow>
+                        <TableRow className='border-gray-300'>
                           <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
                             No fee structures found.
                           </TableCell>
                         </TableRow>
                       ) : (
                         feeHeads.map((fee, index) => (
-                          <TableRow key={fee.id}>
+                          <TableRow key={fee.id} className='border-gray-300'>
                             <TableCell>{index + 1}</TableCell>
                             <TableCell>{fee.name}</TableCell>
                             <TableCell>

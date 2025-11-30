@@ -50,6 +50,10 @@ export async function GET(req) {
                         is_late_fee,
                         fee_heads (
                             name
+                        ),
+                        period_start_end (
+                            period_start,
+                            period_end
                         )
                     ),
                     discounts (
@@ -73,10 +77,22 @@ export async function GET(req) {
             const invoiceItem = pi.invoice_items;
             const discount = pi.discounts?.amount;
 
+            const rawStart = invoiceItem.period_start_end?.[0]?.period_start;
+            const rawEnd = invoiceItem.period_start_end?.[0]?.period_end;
+
+            const periodStart = rawStart
+                ? new Date(rawStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null;
+            const periodEnd = rawEnd
+                ? new Date(rawEnd).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null;
+
             return {
                 fee_head_name: invoiceItem.fee_heads.name,
-                period_key: invoiceItem.period_key,
                 pay_period: invoiceItem.pay_period,
+                period_key: invoiceItem.period_key,
+                period_start: periodStart,
+                period_end: periodEnd,
                 is_late_fee: invoiceItem.is_late_fee,
                 amount: invoiceItem.amount,
                 amount_paid: pi.amount,

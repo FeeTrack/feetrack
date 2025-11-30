@@ -113,10 +113,10 @@ export default function CollectFeesClient() {
     }, [selectedStudent])
 
   return (
-    <div className='px-2'>
+    <div className='space-y-6'>
         <form action={formAction} id='collectFeesForm'>
             <div className='w-full flex items-center justify-start gap-4 md:gap-8'>
-                <div className='w-full flex md:max-w-fit md:flex-row flex-col md:items-center items-start gap-4 md:gap-8'>
+                <div className='w-full flex flex-col sm:flex-row sm:max-w-fit sm:items-center items-start gap-4 md:gap-8'>
                     <div className='flex w-full flex-row md:flex-col items-center justify-between md:items-start gap-2'>
                         <label className='mb-1 font-semibold '>Search by Admission No.</label>
                         <input 
@@ -125,7 +125,7 @@ export default function CollectFeesClient() {
                             value={formData.admNoQuery}
                             onChange={handleChange}
                             disabled={formData.nameQuery.trim() !== ''}
-                            className="border rounded-2xl px-2 py-1"
+                            className="border rounded-2xl px-2 py-1 w-24 sm:w-40"
                         />
                     </div>
                     <p className='text-center w-full md:max-w-fit'>Or</p>
@@ -137,7 +137,7 @@ export default function CollectFeesClient() {
                             value={formData.nameQuery}
                             onChange={handleChange}
                             disabled={formData.admNoQuery.trim() !== ''}
-                            className="border rounded-2xl px-2 py-1"
+                            className="border rounded-2xl px-2 py-1 w-24 sm:w-40"
                         />
                     </div>
                 </div>
@@ -152,17 +152,17 @@ export default function CollectFeesClient() {
             </div>
         )}
 
-        <div className='mt-6 w-full '>
+        <div className='w-full '>
             <div className="w-full max-w-3xl">
                 {students.map(s => (
                 <div key={s.id} className="flex items-center justify-between text-gray-600 p-2 bg-[#f0f0f0] border border-[#f0f0f0] rounded-md mb-4">
                     <div className='flex flex-col gap-2'>
                         <h1 className='font-bold'>{s.name}</h1>
 
-                        <div className='flex items-center gap-2 text-gray-600'>
-                            <div><span className='font-semibold'>Admission No:</span> {s.adm_no}</div>
-                            <div><span className='font-semibold'>Class & Sec:</span> {s.classes.name}-{s.sections.name}</div>
-                            <div><span className='font-semibold'>Roll No:</span> {s.roll_no}</div>
+                        <div className='flex items-center gap-2 text-gray-700'>
+                            <div><span className='font-semibold'>Admission No:</span>{s.adm_no}</div>
+                            <div><span className='font-semibold'>Class & Sec:</span>{`${s.classes.name}${s.sections?.name && `-${s.sections.name}`}`}</div>
+                            <div><span className='font-semibold'>Roll No:</span>{s.roll_no}</div>
                         </div>
                     </div>
                     <div>

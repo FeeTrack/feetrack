@@ -42,7 +42,7 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
 
     return (
         <div> {/* Redevelop without this problematic Card */}
-            <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
+            <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1 sm:flex-initial">
@@ -69,27 +69,27 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className='rounded-md border overflow-hidden'>
+                    <div className='rounded-md border border-gray-300 overflow-hidden'>
                         <Table className="border-collapse table-auto">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead rowSpan={2} className='border border-t-0 border-l-0 text-center w-[200px] md:w-[300px] font-semibold'>Fee Type</TableHead>
-                                    <TableHead colSpan={classes.length} className='border border-t-0 border-r-0 text-center py-2 font-semibold'>Classes</TableHead>
+                                    <TableHead rowSpan={2} className='border border-gray-300 border-t-0 border-l-0 text-center w-[200px] md:w-[300px] font-semibold'>Fee Type</TableHead>
+                                    <TableHead colSpan={classes.length} className='border border-gray-300 border-t-0 border-r-0 text-center py-2 font-semibold'>Classes</TableHead>
                                 </TableRow>
                                 <TableRow>
                                     {classes.map((cls) => (
-                                        <TableHead key={cls.id} className='border border-r-0 text-center font-semibold px-4 py-2'>{cls.name}</TableHead>
+                                        <TableHead key={cls.id} className='border border-gray-300 border-r-0 text-center font-semibold px-4 py-2'>{cls.name}</TableHead>
                                     ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {classesFees.map((fee) => (
                                     <TableRow key={fee.id}>
-                                        <TableCell className="px-4 py-2 border border-l-0 w-[200px] md:w-[300px]">{fee.name}</TableCell>
+                                        <TableCell className="px-4 py-2 border border-gray-300 border-l-0 w-[200px] md:w-[300px]">{fee.name}</TableCell>
                                         {classes.map((cls) => {
                                             const classFee = fee.fee_structures.find((fs) => fs.classes.id === cls.id);
                                                 return (
-                                                    <TableCell key={cls.id} className="px-4 text-center py-2 border border-r-0">
+                                                    <TableCell key={cls.id} className="px-4 text-center py-2 border border-gray-300 border-r-0">
                                                         {classFee ? classFee.amount : '-'}
                                                     </TableCell>
                                                 );
@@ -97,14 +97,14 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
                                     </TableRow>
                                 ))}
                                 <TableRow>
-                                    <TableCell className="px-4 py-2 border border-l-0 border-b-0 font-semibold">Total</TableCell>
+                                    <TableCell className="px-4 py-2 border border-gray-300 border-l-0 border-b-0 font-semibold">Total</TableCell>
                                     {classes.map((cls) => {
                                         const total = classesFees.reduce((acc, fee) => {
                                             const classFee = fee.fee_structures.find((fs) => fs.classes.id === cls.id);
                                             return acc + (classFee ? classFee.amount : 0);
                                         }, 0);
                                         return (
-                                            <TableCell key={cls.id} className="px-4 text-center py-2 border border-b-0 border-r-0 font-semibold">
+                                            <TableCell key={cls.id} className="px-4 text-center py-2 border border-gray-300 border-b-0 border-r-0 font-semibold">
                                                 {total}
                                             </TableCell>
                                         );

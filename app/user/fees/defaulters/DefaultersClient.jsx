@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download } from 'lucide-react';
+import { Search, Download, ArrowLeft, ArrowRight } from 'lucide-react';
 import {UilWhatsapp} from '@iconscout/react-unicons';
 
 export default function DefaultersClient({classes, sections}) {
@@ -60,7 +60,7 @@ export default function DefaultersClient({classes, sections}) {
     const [selectedClass, setSelectedClass] = useState(null);
     const [selectedSection, setSelectedSection] = useState(null);
 
-    const [defaulters, setDefaulters] = useState(null);
+    const [defaulters, setDefaulters] = useState([]);
         
     const [allSelected, setAllSelected] = useState(false);
 
@@ -70,7 +70,15 @@ export default function DefaultersClient({classes, sections}) {
     const [displayFine, setDisplayFine] = useState(false);
     const [displayDiscount, setDisplayDiscount] = useState(false);
 
-    // Show error toast if there's an error
+    const [pageNo, setPageNo] = useState(1);
+    const pageSize = 10;
+    const count = defaulters.length || 0;
+    const totalPages = Math.ceil(count/pageSize)
+
+    const defaultersToDisplay = defaulters.slice(
+        (pageNo - 1) * pageSize, pageNo * pageSize
+    )
+
     useEffect(() => {
         if (state?.defaulters) {
             setHasSearched(true);
@@ -158,14 +166,14 @@ ${schoolName}`;
     return (
         <div className="space-y-6">
             <form action={formAction} id="searchDefaultersForm">
-                <div className='w-full flex items-center justify-start gap-4 md:gap-8'>
-                    <div className="w-full flex lg:max-w-fit lg:flex-row flex-col lg:items-center items-start gap-4 lg:gap-8">
-                        <div className='flex w-full flex-row lg:flex-col items-center justify-between lg:items-start gap-2'>
-                            <div className='flex w-full flex-1 flex-col lg:flex-row justify-between items-start lg:items-center'>
+                <div className='w-full flex items-center justify-start gap-8'>
+                    <div className="w-full flex max-w-fit lg:flex-row flex-col lg:items-center items-start gap-4 lg:gap-8">
+                        <div className='flex w-full max-w-fit flex-col items-start gap-2'>
+                            <div className='flex w-full flex-row justify-between items-center'>
                                 <label className='mb-1 font-semibold'>Months</label>
                                 <button type="button" className='px-2 py-1 rounded-xl text-black text-sm bg-[#f0f0f0] hover:bg-[#e6e6e6]' onClick={selectAllToggle}>{allSelected ? 'Clear All' : 'Select All'}</button>
                             </div>
-                            <div className="w-[300px]">
+                            <div className="w-[200px] md:w[300px]">
                                 <Select
                                     instanceId='months-select'
                                     isMulti
@@ -182,9 +190,9 @@ ${schoolName}`;
                             </div>
                         </div>
                         
-                        <div className='flex w-full flex-row lg:flex-col items-center justify-between lg:items-start gap-2'>
+                        <div className='flex w-full max-w-fit flex-col items-start gap-2'>
                             <label className='mb-1 font-semibold'>Class</label>
-                            <div className="w-[300px] lg:w-[200px]">
+                            <div className="w-[200px]">
                                 <Select
                                     styles={{
                                         control: (base) => ({
@@ -212,9 +220,9 @@ ${schoolName}`;
                             </div>
                         </div>
 
-                        <div className='flex w-full flex-row lg:flex-col items-center justify-between lg:items-start gap-2'>
+                        <div className='flex w-full max-w-fit flex-col items-start gap-2'>
                             <label className='mb-1 font-semibold'>Section</label>
-                            <div className="w-[300px] lg:w-[200px]">
+                            <div className="w-[200px]">
                                 <Select
                                     styles={{
                                         control: (base) => ({
@@ -263,7 +271,7 @@ ${schoolName}`;
                 <h1 className="text-lg font-semibold mb-4">{state?.defaulters && 'Search Results'}</h1>
 
                 {hasSearched ? (
-                    <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
+                    <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
                         <CardHeader>
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <CardDescription>
@@ -287,33 +295,33 @@ ${schoolName}`;
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="rounded-md border overflow-hidden">
+                            <div className="rounded-md border border-gray-300 overflow-hidden">
                                 <Table className='border-collapse'>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className='border border-t-0 border-l-0'>Sr.</TableHead>
-                                            <TableHead className='border border-t-0 '>Student Details</TableHead>
-                                            <TableHead className='border border-t-0 '>Total</TableHead>
-                                            {displayFine && <TableHead className='border border-t-0 '>Fine</TableHead>}
-                                            <TableHead className='border border-t-0 '>Paid</TableHead>
-                                            {displayDiscount && <TableHead className='border border-t-0 '>Discount</TableHead>}
-                                            <TableHead className='border border-t-0 '>Balance</TableHead>
-                                            <TableHead className='border border-t-0 border-r-0'>Actions</TableHead>
+                                            <TableHead className='border border-gray-300 border-t-0 border-l-0'>Sr.</TableHead>
+                                            <TableHead className='border border-gray-300 border-t-0 '>Student Details</TableHead>
+                                            <TableHead className='border border-gray-300 border-t-0 '>Total</TableHead>
+                                            {displayFine && <TableHead className='border border-gray-300 border-t-0 '>Fine</TableHead>}
+                                            <TableHead className='border border-gray-300 border-t-0 '>Paid</TableHead>
+                                            {displayDiscount && <TableHead className='border border-gray-300 border-t-0 '>Discount</TableHead>}
+                                            <TableHead className='border border-gray-300 border-t-0 '>Balance</TableHead>
+                                            <TableHead className='border border-gray-300 border-t-0 border-r-0'>Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {defaulters.length === 0 ? (
-                                            <TableRow>
+                                            <TableRow className='border-gray-300'>
                                                 <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                                                     No defaulters found.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            defaulters.map((d, index) => {
+                                            defaultersToDisplay.map((d, index) => {
                                                 return (
                                                     <TableRow key={index}>
-                                                        <TableCell className={`border border-l-0 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>{index + 1}</TableCell>
-                                                        <TableCell className={`p-2 border border-black ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                        <TableCell className={`border border-gray-300 border-l-0 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>{index + 1}</TableCell>
+                                                        <TableCell className={`p-2 border border-gray-300 ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             <div className="flex flex-col gap-1">
                                                                 <div className="font-semibold">{d?.student?.name}</div>
                                                                 <div>Class: {`${d?.student.class_name}-${d?.student?.section_name}`}</div>
@@ -321,41 +329,41 @@ ${schoolName}`;
                                                                 <div>Mobile: {d?.student?.parent_mobile}</div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                        <TableCell className={`p-2 border border-gray-300 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             {d?.periods.map(p => (
                                                                 <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.total}</div>
                                                             ))}
                                                             <div className="font-bold text-gray-700 mt-1">Total: {d?.grandTotal}</div>
                                                         </TableCell>
                                                         {displayFine && (
-                                                            <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            <TableCell className={`p-2 border border-gray-300 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                                 {d?.periods.map(p => (
                                                                     <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.fine}</div>
                                                                 ))}
                                                                 <div className="font-bold text-gray-700 mt-1">Total: {d?.grandFine}</div>
                                                             </TableCell>
                                                         )}
-                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                        <TableCell className={`p-2 border border-gray-300 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             {d?.periods.map(p => (
                                                                 <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.paid}</div>
                                                             ))}
                                                             <div className="font-bold text-gray-700 mt-1">Total: {d?.grandPaid}</div>
                                                         </TableCell>
                                                         {displayDiscount && (
-                                                            <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                            <TableCell className={`p-2 border border-gray-300 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                                 {d?.periods.map(p => (
                                                                     <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.discount}</div>
                                                                 ))}
                                                                 <div className="font-bold text-gray-700 mt-1">Total: {d?.grandDiscount}</div>
                                                             </TableCell>
                                                         )}
-                                                        <TableCell className={`p-2 border border-black align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                        <TableCell className={`p-2 border border-gray-300 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             {d?.periods.map(p => (
                                                                 <div key={p?.pay_period} className="flex items-center gap-2"><h6 className="w-6">{p?.pay_period}:</h6> {p?.balance}</div>
                                                             ))}
                                                             <div className="font-bold text-gray-700 mt-1">Total: {d?.grandBalance}</div>
                                                         </TableCell>
-                                                        <TableCell className={`p-2 border border-black border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
+                                                        <TableCell className={`p-2 border border-gray-300 border-r-0 align-top ${index === defaulters.length-1 ? 'border-b-0' : ''}`}>
                                                             <button className="primary-btn flex items-center gap-1" onClick={() => handleSendReminder(d?.student?.name, d?.schoolName, d?.student?.parent_mobile)}>
                                                                 <UilWhatsapp size='16px'/>
                                                                 <h4><span className="hidden md:inline">Send </span>Reminder</h4>
@@ -367,6 +375,19 @@ ${schoolName}`;
                                         )}
                                     </TableBody>
                                 </Table>
+                            </div>
+                            <div className='w-full flex justify-between items-center mt-2 px-2'>
+                                <p className='text-gray-700 text-sm'>Showing page {pageNo} of {totalPages === 0 ? 1 : totalPages}</p>
+
+                                <div className='flex items-center gap-4'>
+                                <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === 1} onClick={() => {setPageNo(prev => prev - 1)}}>
+                                    <ArrowLeft className='w-4 h-4' />
+                                </button>
+                                
+                                <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === totalPages || defaulters.length === 0} onClick={() => setPageNo(prev => prev + 1)} >
+                                    <ArrowRight className='w-4 h-4' />
+                                </button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

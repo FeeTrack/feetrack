@@ -19,12 +19,13 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Download, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff } from "lucide-react";
+import { Plus, Search, Download, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 
 export default function StudentsClient({ profile, schoolType, recentAdmissions, showAdd: initialShowAdd }) {
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
+  const [transportRoutes, setTransportRoutes] = useState([]);
   const [admNo, setAdmNo] = useState('');
   
   const [students, setStudents] = useState(recentAdmissions || []);
@@ -45,6 +46,15 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
   const supabase = createClientSupabase();
 
+  const [pageNo, setPageNo] = useState(1);
+  const pageSize = 10;
+  const count = students.length || 0;
+  const totalPages = Math.ceil(count/pageSize)
+
+  const studentsToDisplay = students.slice(
+      (pageNo - 1) * pageSize, pageNo * pageSize
+  )
+
   useEffect(() => {
     const sourceData = hasFilteredStudents ? filteredStudents : recentAdmissions;
     if (searchQuery.trim() === '') {
@@ -60,25 +70,41 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
   }, [searchQuery]);
 
   useEffect(() => {
-    if (classes.length > 0) return;
     async function fetchClassesSections() {
+      if (classes.length > 0) return;
     
-      const { data: classes } = await supabase
+      const { data: clss } = await supabase
         .from('classes')
         .select('name, id')
         .eq('school_id', profile.school_id)
         .order("name", { ascending: true });
-      setClasses(classes || []);
+      setClasses(clss || []);
   
-      const { data: sections } = await supabase
+      const { data: secs } = await supabase
         .from('sections')
         .select('name, id, class_id')
         .eq('school_id', profile.school_id)
         .order("name", { ascending: true });
-      setSections(sections || []);
+      setSections(secs || []);
+    }
+
+    async function fetchTransportRoutes() {
+      if (transportRoutes.length > 0) return;
+
+      const {data: routes, error: routeError} = await supabase
+        .from('transport_routes')
+        .select('id, name, monthly_fee')
+        .eq('school_id', profile.school_id);
+      if (routeError) {
+        console.error(routeError.message);
+        toast.error('Failed to load transport routes.');
+      }
+
+      setTransportRoutes(routes || []);
     }
   
     fetchClassesSections();
+    fetchTransportRoutes();
   }, [])
 
   useEffect(() => {
@@ -90,7 +116,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
         .eq('school_id', profile.school_id)
         .order('adm_no', { ascending: false })
         .limit(1);
-      setAdmNo((admissionNo.length === 0 ? 1 : admissionNo[0].adm_no + 1));
+      setAdmNo((admissionNo.length === 0 ? 1 : parseInt(admissionNo[0].adm_no) + 1));
     }
     fetchAdmNo();
   }, [showAdd]);
@@ -103,6 +129,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
   }
 
   useEffect(() => {
+    if (hasFilteredStudents) return;
     setStudents(recentAdmissions);
   }, [recentAdmissions]);
 
@@ -220,17 +247,22 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
     try {
       setOpenDelete(false)
       setTimeout(() => setDeleting(true), 200); // Delay showing spinner to avoid flicker for fast operations
-      const res = await fetch(`/api/students/${studentId}`, {
-          method: 'DELETE'
-      })
-      const data = await res.json()
-      
-      if (!res.ok) {
-        toast.error("Failed to delete student: " + (data.error || res.statusText));
-        return;
+
+      const {error} = await supabase
+        .from('students')
+        .delete()
+        .eq('school_id', profile.school_id)
+        .eq('id', studentId);
+      if (error) {
+        console.error(error.message);
+        if (error.code === '23503') {
+          toast.error("Failed to delete student as payment records exist.")
+        } else {
+          toast.error('Failed to delete student.')
+        }
+        return
       }
 
-      // Success
       toast.success(`Successfully Deleted Student: ${studentName}`);
       setStudents(prev => prev.filter(s => s.id !== studentId));
   } catch (error) {
@@ -259,13 +291,13 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
         </button>
       </div>
 
-      <div className={`w-full overflow-hidden ${showFilter ? 'max-h-20 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
+      <div className={`w-full overflow-hidden ${showFilter ? 'max-h-60 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
         <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
           {currentSession?.id && <input type="hidden" name="currentSession" value={currentSession.id} />}
 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Class</label>
-            <select name="class" className="border rounded px-2 py-1 md:min-w-[100px] max-w-fit hover:border hover:border-secondary z-10" value={filterFormData.class} onChange={handleFilterChange}>
+            <select name="class" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.class} onChange={handleFilterChange}>
               <option value='' className="text-black">Select Class</option>
               {classes?.map(cls => (
                 <option key={cls.id} value={cls.id} className='text-black'>
@@ -277,7 +309,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Section</label>
-            <select name="section" className="border rounded px-2 py-1 w-[50px] md:w-[100px] hover:border hover:border-secondary z-10" value={filterFormData.section} onChange={handleFilterChange}>
+            <select name="section" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.section} onChange={handleFilterChange}>
               {filteredSections?.map(section => (
                 <option key={section.id} value={section.id} className='text-black'>
                   {section.name}
@@ -288,8 +320,8 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Status</label>
-            <select name="studentStatus" className="border rounded px-2 py-1 w-[60px] md:w-[100px] hover:border hover:border-secondary z-10" value={filterFormData.studentStatus} onChange={handleFilterChange}>
-              <option value='' className="text-black">Select Status</option>
+            <select name="studentStatus" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.studentStatus} onChange={handleFilterChange}>
+              <option value='' className="text-black"></option>
               {studentStatuses.map(status => (
                 <option key={status.value} value={status.value} className='text-black'>
                   {status.label}
@@ -300,8 +332,8 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Type</label>
-            <select name="studentType" className="border rounded px-2 py-1 w-[60px] md:w-[100px] hover:border hover:border-secondary z-10" value={filterFormData.studentType} onChange={handleFilterChange}>
-              <option value='' className="text-black">Select Type</option>
+            <select name="studentType" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.studentType} onChange={handleFilterChange}>
+              <option value='' className="text-black"></option>
               {studentTypes.map(type => (
                 <option key={type.value} value={type.value} className='text-black'>
                   {type.label}
@@ -309,7 +341,6 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
               ))}
             </select>
           </div>
-
 
           <button type="submit" className="primary-btn ml-2" form="filterForm" disabled={!filterFormData.class}>Filter</button>
           
@@ -334,7 +365,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           <h1 className="text-lg font-semibold mb-4">{hasFilteredStudents ? 'Search Results' : 'Recent Admissions'}</h1> {/* If not filter, then Recent Admissions */}
 
           {/* Table */}
-          <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
+          <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 {hasFilteredStudents && (
@@ -361,10 +392,10 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border border-gray-300">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className='border-gray-300'>
                       <TableHead>Sr.</TableHead>
                       <TableHead>Student Details</TableHead>
                       <TableHead>Academic Details</TableHead>
@@ -373,14 +404,14 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
                   </TableHeader>
                   <TableBody>
                     {students.length === 0 ? (
-                      <TableRow>
+                      <TableRow className='border-gray-300'>
                         <TableCell colSpan={4} className='text-center py-4 text-muted-foreground'>
                           No students yet.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      students.map((s, index) => (
-                        <TableRow key={s.id}>
+                      studentsToDisplay.map((s, index) => (
+                        <TableRow key={s.id} className="border-gray-300">
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
@@ -455,6 +486,19 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
                   </TableBody>
                 </Table>
               </div>
+              <div className='w-full flex justify-between items-center mt-2 px-2'>
+                  <p className='text-gray-700 text-sm'>Showing page {pageNo} of {totalPages === 0 ? 1 : totalPages}</p>
+
+                  <div className='flex items-center gap-4'>
+                  <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === 1} onClick={() => {setPageNo(prev => prev - 1)}}>
+                      <ArrowLeft className='w-4 h-4' />
+                  </button>
+                  
+                  <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === totalPages || students.length === 0} onClick={() => setPageNo(prev => prev + 1)} >
+                      <ArrowRight className='w-4 h-4' />
+                  </button>
+                  </div>
+              </div>
             </CardContent>
           </Card>        
         </>
@@ -481,7 +525,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           action="Delete"
             message={
             <>
-              Are you sure you want to delete the student <strong>{deleteStudent.name}</strong>? This will permanently remove the student's record and associated data.
+              Are you sure you want to delete the student <strong>{deleteStudent.name}</strong>? This will <strong>permanently remove</strong> the student's record and associated data.
             </>
             }
         />
@@ -503,6 +547,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           admNo={admNo}
           sections={sections}
           schoolType={schoolType}
+          transportRoutes={transportRoutes}
         />
       </Modal>
 

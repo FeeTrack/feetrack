@@ -7,7 +7,7 @@ export async function signupAction(prevState, formData) {
     const schoolAddress = String(formData.get('schoolAddress') ?? '')
     const schoolType = String(formData.get('schoolType') ?? '')
     const userName = String(formData.get('profileName') ?? '')
-    const mobileNumber = String(formData.get('mobileNumber') ?? '')
+    const mobileNo = String(formData.get('mobileNo') ?? '')
     const email = String(formData.get('emailUserName') ?? '')
     const password = String(formData.get('password') ?? '')
 
@@ -52,7 +52,7 @@ export async function signupAction(prevState, formData) {
     const { error: dbError } = await supabase
         .from('profiles')
         .insert([
-            { id: user.id, name: userName, mobile_no: mobileNumber, school_id: school.id }
+            { id: user.id, name: userName, mobile_no: mobileNo, school_id: school.id }
         ]);
 
     if (dbError) {

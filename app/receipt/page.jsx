@@ -51,6 +51,7 @@ export default function ReceiptPreview() {
       {
         fee_head_name: "Tuition Fee",
         period_key: "Apr-2025",
+        period_start_end: {period_start: '18/11/2025', period_end: '19/11/2025'},
         is_late_fee: false,
         amount: 5000,
         amount_paid: 5000,
@@ -106,7 +107,9 @@ export function buildReceiptHtml(paymentData) {
   const itemsHtml = items.map((item, index) => 
     `<tr>
         <td>${index + 1}</td>
-        <td>${item.is_late_fee ? `Late Fee - ${item.fee_head_name}` : `${item.fee_head_name}`}</td>
+        <td>${item.is_late_fee ? `Late Fee - ${item.fee_head_name}` : `${item.fee_head_name}`}
+          <span class='period_start_end'>${item.period_start_end ? `(${item.period_start_end.period_start} - ${item.period_start_end.period_end})` : ''}</span>
+        </td>
         <td>${item.period_key || '-'}</td>
         <td>${item.amount}</td>
         <td>${item.discount}</td>
@@ -261,6 +264,11 @@ export function buildReceiptHtml(paymentData) {
     .payment-table td:nth-child(2) {
       text-align: left;
       padding-left: 8px;
+    }
+
+    .period_start_end {
+      font-style: italic;
+      font-size: 10px;
     }
 
     td.totalsTd {

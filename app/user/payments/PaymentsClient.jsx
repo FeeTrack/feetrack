@@ -14,12 +14,12 @@ import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, Edit, Trash2, Plus, Filter } from 'lucide-react';
+import { Search, Download, Edit, Trash2, Plus, Filter, ArrowLeft, ArrowRight } from 'lucide-react';
 
 import { useSession } from '@/Context/SessionContext';
 import Link from "next/link";
 
-export default function PaymentsClient({ recentPayments }) {
+export default function PaymentsClient({ profile, recentPayments }) {
     const [payments, setPayments] = useState(recentPayments || []);
     const [showEdit, setShowEdit] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
@@ -58,6 +58,15 @@ export default function PaymentsClient({ recentPayments }) {
         })
     }
 
+    const [pageNo, setPageNo] = useState(1);
+    const pageSize = 10;
+    const count = payments.length || 0;
+    const totalPages = Math.ceil(count/pageSize)
+
+    const paymentsToDisplay = payments.slice(
+        (pageNo - 1) * pageSize, pageNo * pageSize
+    )
+
     const [deletePayment, setDeletePayment] = useState(null);
     const [openDelete, setOpenDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -88,15 +97,16 @@ export default function PaymentsClient({ recentPayments }) {
     }, [state]);
 
     const clearFilters = () => {
-    setFilterFormData({
-      from_date: '',
-      to_date: '',
-    });
-    setHasFilteredPayments(false);
-    setPayments(recentPayments);
-  }
+        setFilterFormData({
+        from_date: '',
+        to_date: '',
+        });
+        setHasFilteredPayments(false);
+        setPayments(recentPayments);
+    }
 
     useEffect(() => {
+        if (hasFilteredPayments) return;
         setPayments(recentPayments);
     }, [recentPayments]);
 
@@ -237,20 +247,22 @@ export default function PaymentsClient({ recentPayments }) {
                         Add Payment                            
                     </Link>
 
-                    <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
-                        <Filter className="w-4 h-4" />
-                        Filter Payments
-                    </button>
+                    {profile.role === 'admin' && (
+                        <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
+                            <Filter className="w-4 h-4" />
+                            Filter Payments
+                        </button>
+                    )}
                 </div>
 
-                <div className={`w-full overflow-hidden ${showFilter ? 'max-h-20 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
+                <div className={`w-full overflow-hidden ${showFilter ? 'max-h-60 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
                     <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
-                        <div className="flex flex-col gap-2 justify-start">
+                        <div className="flex flex-col gap-2">
                             <label htmlFor="from_date" className="font-semibold">From</label>
                             <input type="date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} />
                         </div>
 
-                        <div className="flex flex-col gap-2 justify-start">
+                        <div className="flex flex-col gap-2">
                             <label htmlFor="to_date" className="font-semibold">To</label>
                             <input type="date" name="to_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.to_date} onChange={handleFilterChange} min={filterFormData.from_date} max={currentSession?.end_date} />
                         </div>
@@ -272,7 +284,7 @@ export default function PaymentsClient({ recentPayments }) {
                 <h1 className="text-lg font-semibold mb-4">{ hasFilteredPayments ? 'Search Results' : 'Recent Payments'}</h1>
 
                 {/* Table */}
-                <Card className='w-full max-w-[calc(100vw-48px)] overflow-x-auto'>
+                <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             {hasFilteredPayments && (
@@ -299,10 +311,10 @@ export default function PaymentsClient({ recentPayments }) {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border">
+                        <div className="rounded-md border border-gray-300">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
+                                    <TableRow className='border-gray-300'>
                                         <TableHead>Sr.</TableHead>
                                         <TableHead>Receipt No.</TableHead>
                                         <TableHead>Student</TableHead>
@@ -314,14 +326,14 @@ export default function PaymentsClient({ recentPayments }) {
                                 </TableHeader>
                                 <TableBody>
                                     {payments.length === 0 ? (
-                                        <TableRow>
+                                        <TableRow className='border-gray-300'>
                                             <TableCell colSpan={7} className='text-center py-4 text-muted-foreground'>
                                                 No payments yet.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        payments.map((p, index) => (
-                                            <TableRow key={p.id}>
+                                        paymentsToDisplay.map((p, index) => (
+                                            <TableRow key={p.id} className='border-gray-300'>
                                                 <TableCell>{index + 1}</TableCell>
                                                 <TableCell>{p.receipt_no}</TableCell>
                                                 <TableCell>{`${p.students?.name} {${p.students?.adm_no}}`}</TableCell>
@@ -343,6 +355,19 @@ export default function PaymentsClient({ recentPayments }) {
                                     )}
                                 </TableBody>
                             </Table>
+                        </div>
+                        <div className='w-full flex justify-between items-center mt-2 px-2'>
+                            <p className='text-gray-700 text-sm'>Showing page {pageNo} of {totalPages === 0 ? 1 : totalPages}</p>
+
+                            <div className='flex items-center gap-4'>
+                            <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === 1} onClick={() => {setPageNo(prev => prev - 1)}}>
+                                <ArrowLeft className='w-4 h-4' />
+                            </button>
+                            
+                            <button className='p-1 bg-gray-200 rounded-md disabled:bg-transparent' disabled={pageNo === totalPages || payments.length === 0} onClick={() => setPageNo(prev => prev + 1)} >
+                                <ArrowRight className='w-4 h-4' />
+                            </button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
