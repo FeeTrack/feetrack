@@ -3,9 +3,9 @@
 
 @theme {
   /* Colors - Purple Theme */
-  --color-primary: #7c3aed;
+  --color-primary: #5a4bda;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #8b5cf6;
+  --color-secondary: #6366f1;
   --color-secondary-foreground: #ffffff;
   --color-accent: oklch(70.5% .213 47.604);
   --color-accent-foreground: #ffffff;

@@ -52,7 +52,7 @@ const ToolHeader = ({pageName, profile}) => {
                 </div>
 
                 {/* Page Title */}
-                <h2 className="md:text-xl font-semibold capitalize max-w-min">{pageTitle}</h2>
+                <h2 className="md:text-xl font-semibold capitalize">{pageTitle}</h2>
             </div>
             
 
@@ -107,7 +107,7 @@ const ToolHeader = ({pageName, profile}) => {
                 {/* User Menu */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className='rounded-full size-7 xs:size-9 bg-transparent hover:bg-secondary flex items-center justify-center'>
+                        <button className='rounded-full size-7 xs:size-9 bg-transparent hover:bg-secondary/50 flex items-center justify-center'>
                             <div className="rounded-full size-6 xs:size-8 text-xs xs:text-sm bg-primary text-primary-foreground flex justify-center items-center">
                                 {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                             </div>

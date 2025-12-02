@@ -98,28 +98,28 @@ export default function DashboardContent({profile}) {
             value: stats.totalStudents.toLocaleString('en-IN'),
             icon: Users,
             description: `In ${currentSession.name}`,
-            color: 'text-purple-600',
+            color: 'text-indigo-600',
         },
         {
             title: 'Total Fees',
             value: stats.totalFees.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }),
             icon: IndianRupee,
             description: `For ${currentSession.name}`,
-            color: 'text-purple-600',
+            color: 'text-indigo-600',
         },
         {
             title: 'Total Collected',
             value: stats.totalCollection.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }),
             icon: Wallet,
             description: `${Math.round((stats.totalCollection / stats.totalFees) * 100)}% of Total Fees`,
-            color: 'text-purple-600',
+            color: 'text-indigo-600',
         },
         {
             title: 'Fees Due',
             value: stats.feesDue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }),
             icon: AlertCircle,
             description: `Upto Current Month (${passedPayPeriods[passedPayPeriods.length - 1]})`,
-            color: 'text-purple-600',
+            color: 'text-indigo-600',
         },
     ]
 
@@ -128,7 +128,7 @@ export default function DashboardContent({profile}) {
             title: 'Add Student',
             icon: Plus,
             href: { pathname: '/user/students', query: { showAdd: true } },
-            color: 'border-purple-300 hover:border-purple-500',
+            color: 'border-indigo-300 hover:border-indigo-500',
         },
         {
             title: 'Collect Fees',
