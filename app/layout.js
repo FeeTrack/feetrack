@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FeeTrack - Fee Management Software for Schools, Coaching Centres and Colleges",
-  description: "FeeTrack is a free, modern and user-friendly solution to manage student data and fee collection - pefectly aligned with your academic structure, with custom features for schools, coaching centres and colleges.",
+  title: "FeeTrack - Fee Management App for Schools, Coaching Centres and Colleges",
+  description: "FeeTrack is a modern, complete, and user-friendly solution to manage student data and fee collection - with custom features for schools, coaching centres and colleges.",
 };
 
 export default function RootLayout({ children }) {

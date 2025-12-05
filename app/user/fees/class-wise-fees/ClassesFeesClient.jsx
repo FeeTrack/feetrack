@@ -40,6 +40,57 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
         }
     }, [clsQuery])
 
+    const printTable = () => {
+        const printContent = document.getElementById('class-fee-table');
+        const windowPrint = window.open('', '', 'width=900,height=650');
+        
+        windowPrint.document.write(`
+            <html>
+                <head>
+                    <title>Class-wise Fees</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 20px;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                        }
+                        th, td {
+                            border: 1px solid #d1d5db;
+                            padding: 8px 16px;
+                            text-align: left;
+                        }
+                        th {
+                            background-color: #f3f4f6;
+                            font-weight: 600;
+                        }
+                        .text-center {
+                            text-align: center;
+                        }
+                        .font-semibold {
+                            font-weight: 600;
+                        }
+                        @media print {
+                            body {
+                                margin: 0;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent.innerHTML}
+                </body>
+            </html>
+        `);
+        
+        windowPrint.document.close();
+        windowPrint.focus();
+        windowPrint.print();
+        windowPrint.close();
+    };
+
     return (
         <div> {/* Redevelop without this problematic Card */}
             <Card className='w-full max-w-[calc(100vw-32px)] overflow-x-auto border-gray-300'>
@@ -63,13 +114,13 @@ export default function ClassFeesClient({ classesFees: cf, classes: cls }) {
                                 className="pl-8 w-full max-w-64 text-sm"
                             />
                         </div>
-                        <Button variant='outline' size='icon'>
+                        <Button variant='outline' size='icon' onClick={printTable} >
                             <Printer className="h-4 w-4" />
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className='rounded-md border border-gray-300 overflow-hidden'>
+                    <div className='rounded-md border border-gray-300 overflow-hidden' id='class-fee-table'>
                         <Table className="border-collapse table-auto">
                             <TableHeader>
                                 <TableRow>

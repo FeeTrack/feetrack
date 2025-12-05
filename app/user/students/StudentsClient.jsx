@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useActionState } from "react";
 import { createClientSupabase } from '@/utils/supabase/client';
 import toast from 'react-hot-toast';
+import ExcelJS from 'exceljs';
+
 import { filterStudentsAction } from "./actions";
 import { updateStudentFeeStructure } from "@/utils/billing/updateStudentFeeStructure";
 import { leftOutStudentAction } from "./actions";
@@ -237,6 +239,74 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
     }
   }
 
+  const downloadExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Students");
+
+    sheet.columns = [
+      { header: "Sr.", key: "sr", width: 6 },
+      { header: "Student Name", key: "student_name", width: 20 },
+      { header: "Father's Name", key: "father_name", width: 20 },
+      { header: "Mother's Name", key: "mother_name", width: 20 },
+      { header: "Class", key: "class", width: 15 },
+      { header: "Adm. No.", key: "adm_no", width: 10 },
+      { header: "Roll No.", key: "roll_no", width: 10 },
+      { header: "Mobile No.", key: "mobile_no", width: 15 },
+      { header: "Adm. Date", key: "adm_date", width: 10 },
+    ];
+
+    // ⭐ Bold header row (Row 1)
+    sheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+    });
+
+    students.forEach((s, index) => {
+      const row = sheet.addRow({
+        sr: index + 1,
+        student_name: s.name,
+        father_name: s.father_name,
+        mother_name: s.mother_name,
+        class: `${s.classes.name}${s.sections.name ? ` (${s.sections.name})` : ''}`,
+        adm_no: s.adm_no,
+        roll_no: s.roll_no,
+        mobile_no: s.parent_mobile,
+        adm_date: s.adm_date
+      });
+
+      row.eachCell((cell) => {
+          cell.alignment = { vertical: "top", wrapText: true };
+          cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+          };
+      });
+      
+      // Center align the Sr. column
+      row.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Students_${new Date().toLocaleDateString('en-IN')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const [openDelete, setOpenDelete] = useState(false)
   const [deleteStudent, setDeleteStudent] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -385,7 +455,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
                       className='pl-8 w-full max-w-64 text-sm'
                     />
                   </div>
-                  <Button variant='outline' size='icon'>
+                  <Button variant='outline' size='icon' onClick={downloadExcel} >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>

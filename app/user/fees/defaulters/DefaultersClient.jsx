@@ -2,6 +2,7 @@
 import { useState, useActionState, useEffect } from "react";
 import toast from 'react-hot-toast';
 import Select from 'react-select';
+import ExcelJS from 'exceljs';
 
 import { searchDefaultersAction } from './actions';
 import { months } from "@/utils/constants/backend";
@@ -145,6 +146,119 @@ export default function DefaultersClient({classes, sections}) {
         }
     }, [searchQuery]);
 
+    const downloadExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Defaulters");
+
+    // Define columns with width
+    sheet.columns = [
+        { header: "Sr.", key: "sr", width: 6 },
+        { header: "Student Details", key: "student_details", width: 20 },
+        { header: "Total", key: "total", width: 12 },
+        ...(displayFine ? [{ header: "Fine", key: "fine", width: 12 }] : []),
+        { header: "Paid", key: "paid", width: 12 },
+        ...(displayDiscount ? [{ header: "Discount", key: "discount", width: 12 }] : []),
+        { header: "Balance", key: "balance", width: 12 },
+    ];
+
+    // Header styling
+    sheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    });
+
+    // Add rows
+    defaulters.forEach((d, index) => {
+        // Use rich text for student details to make name bold
+        const studentDetails = {
+            richText: [
+                { font: { bold: true }, text: d.student.name },
+                { text: `\nClass: ${p.students?.classes?.name}${p.students?.sections?.name ? `-${p.students.sections.name}` : ''}` },
+                { text: `\nAdm. No: ${d.student.adm_no} Roll No: ${d.student.roll_no ? d.student.roll_no : ''}` },
+                { text: `\nMobile: ${d.student.parent_mobile}` }
+            ]
+        };
+
+        const totalBlock = {
+            richText: [
+                { text: d.periods.map(p => `${p.pay_period}: ${p.total}`).join("\n") },
+                { font: { bold: true }, text: `\nTotal: ${d.grandTotal}`}
+            ]
+        }
+
+        const fineBlock = displayFine
+            ? { richText: [
+                { text: d.periods.map(p => `${p.pay_period}: ${p.fine}`).join("\n") },
+                { font: { bold: true }, text: `\nTotal: ${d.grandFine}`} ] }
+            : null;
+
+        const paidBlock = {
+            richText: [
+                { text: d.periods.map(p => `${p.pay_period}: ${p.paid}`).join("\n") },
+                { font: { bold: true }, text: `\nTotal: ${d.grandPaid}`}
+            ]
+        }
+
+        const discountBlock = displayDiscount
+            ? { richText: [
+                { text: d.periods.map(p => `${p.pay_period}: ${p.discount}`).join("\n") },
+                { font: { bold: true }, text: `\nTotal: ${d.grandDiscount}`} ] }
+            : null;
+
+        const balanceBlock = {
+            richText: [
+                { text: d.periods.map(p => `${p.pay_period}: ${p.balance}`).join("\n") },
+                { font: { bold: true }, text: `\nTotal: ${d.grandBalance}`}
+            ]
+        }
+
+        const rowArray = [
+            index + 1,
+            studentDetails,
+            totalBlock,
+            ...(displayFine ? [fineBlock] : []),
+            paidBlock,
+            ...(displayDiscount ? [discountBlock] : []),
+            balanceBlock,
+        ];
+
+        const row = sheet.addRow(rowArray);
+
+        // Style each cell
+        row.eachCell((cell) => {
+            cell.alignment = { vertical: "top", wrapText: true };
+            cell.border = {
+                top: { style: "thin" },
+                left: { style: "thin" },
+                bottom: { style: "thin" },
+                right: { style: "thin" }
+            };
+        });
+        
+        // Center align the Sr. column
+        row.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    // Download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Defaulters_${new Date().toLocaleDateString('en-IN')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
     const handleSendReminder = (studentName, schoolName, mobileNo) => {
         const message = `Dear Parent,
 
@@ -173,7 +287,7 @@ ${schoolName}`;
                                 <label className='mb-1 font-semibold'>Months</label>
                                 <button type="button" className='px-2 py-1 rounded-xl text-black text-sm bg-[#f0f0f0] hover:bg-[#e6e6e6]' onClick={selectAllToggle}>{allSelected ? 'Clear All' : 'Select All'}</button>
                             </div>
-                            <div className="w-[200px] md:w[300px]">
+                            <div className="w-[200px] md:w-[300px]">
                                 <Select
                                     instanceId='months-select'
                                     isMulti
@@ -288,7 +402,7 @@ ${schoolName}`;
                                             className="pl-8 w-full max-w-64 text-sm"
                                         />
                                     </div>
-                                    <Button variant='outline' size='icon'>
+                                    <Button variant='outline' size='icon' onClick={downloadExcel} >
                                         <Download className="h-4 w-4" />
                                     </Button>
                                 </div>

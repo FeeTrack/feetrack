@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import Modal from '@/components/Modal';
 import toast from 'react-hot-toast';
+import { createClientSupabase } from '@/utils/supabase/client';
 
+import Modal from '@/components/Modal';
 import CreateFeeForm from './CreateFeeForm';
 import EditFeeForm from './EditFeeForm';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Download, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Printer } from "lucide-react";
 
 export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }) {
   const [feeHeads, setFeeHeads] = useState(initial);
@@ -25,6 +26,8 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
     setFeeHeads(initial);
     setClasses(cls);
   }, [initial, cls]);
+
+  const supabase = createClientSupabase();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,6 +48,63 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
+
+  const printTable = () => {
+      const printContent = document.getElementById('fees-structure');
+      const clone = printContent.cloneNode(true);
+      
+      // Remove all elements with 'no-print' class
+      const noPrintElements = clone.querySelectorAll('.no-print');
+      noPrintElements.forEach(el => el.remove());
+
+      const windowPrint = window.open('', '', 'width=900,height=650');
+      
+      windowPrint.document.write(`
+          <html>
+              <head>
+                  <title>Fees Structure</title>
+                  <style>
+                      body {
+                          font-family: Arial, sans-serif;
+                          margin: 20px;
+                      }
+                      table {
+                          width: 100%;
+                          border-collapse: collapse;
+                      }
+                      th, td {
+                          border: 1px solid #d1d5db;
+                          padding: 8px 16px;
+                          text-align: left;
+                      }
+                      th {
+                          background-color: #f3f4f6;
+                          font-weight: 600;
+                      }
+                      .text-center {
+                          text-align: center;
+                      }
+                      .font-semibold {
+                          font-weight: 600;
+                      }
+                      @media print {
+                          body {
+                              margin: 0;
+                          }
+                      }
+                  </style>
+              </head>
+              <body>
+                  ${clone.innerHTML}
+              </body>
+          </html>
+      `);
+      
+      windowPrint.document.close();
+      windowPrint.focus();
+      windowPrint.print();
+      windowPrint.close();
+  };
 
   const handleSubmit = (state) => {
     scrollModalTop()
@@ -69,17 +129,19 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
     try {
         setOpenDelete(false);
         setTimeout(() => setDeleting(true), 200); // Delay showing spinner to avoid flicker for fast operations
-        const res = await fetch(`/api/fees/setup/${feeHeadID}`, {
-            method: 'DELETE'
-        })
-        const data = await res.json()
-        if (!res.ok) {
-            toast.error("Failed to delete fee structure. " + data.error);
-            return;
+
+        const {error} = await supabase
+          .from('fee_heads')
+          .delete()
+          .eq('id', feeHeadID);
+
+        if (error) {
+          console.error(error.message)
+          toast.error('Failed to delete fee structure.')
+          return
         }
-        
-        // success
-        toast.success(`Successfully Deleted Fee Structure: ${feeHeadName}`);
+
+        toast.success(`Successfully deleted fee structure: ${feeHeadName}`);
         setFeeHeads(prev => prev.filter(f => f.id !== feeHeadID));
     } catch (error) {
         console.error("Error deleting fee structure:" + error)
@@ -114,20 +176,20 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
                         className="pl-8 w-full max-w-64 text-sm"
                     />
                   </div>
-                  <Button variant='outline' size='icon'>
-                    <Download className="h-4 w-4" />
+                  <Button variant='outline' size='icon' onClick={printTable} >
+                    <Printer className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className='rounded-md border border-gray-300'>
+                <div className='rounded-md border border-gray-300' id='fees-structure'>
                   <Table>
                     <TableHeader>
                       <TableRow className='border-gray-300'>
                         <TableHead>Sr.</TableHead>
                         <TableHead>Fee Type</TableHead>
                         <TableHead>Class Wise Amount</TableHead>
-                        <TableHead className="text-right pr-4">Actions</TableHead>
+                        <TableHead className="text-right pr-4 no-print">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -152,7 +214,7 @@ export default function FeesSetupClient({ feeHeads: initial, classes: cls = [] }
                                 ))}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right pr-4">
+                            <TableCell className="text-right pr-4 no-print">
                               <div className="flex justify-end gap-2">
                                 <button className='p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200' onClick={() => {setEditFeeHead(fee); setShowEdit(true);}}>
                                   <Edit className="h-4 w-4" />

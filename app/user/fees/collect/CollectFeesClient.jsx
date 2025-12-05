@@ -144,25 +144,25 @@ export default function CollectFeesClient() {
 
                 <button type="submit" className="primary-btn ml-2" form='collectFeesForm' disabled={!formData.admNoQuery.trim() && !formData.nameQuery.trim()}>Search</button>
             </div>
+            {pending && (
+                <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 transition-all duration-200">
+                    <Spinner size={28} />
+                </div>
+            )}
         </form>
 
-        {pending && (
-            <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50 transition-all duration-200">
-                <Spinner size={28} />
-            </div>
-        )}
 
         <div className='w-full '>
             <div className="w-full max-w-3xl">
                 {students.map(s => (
-                <div key={s.id} className="flex items-center justify-between text-gray-600 p-2 bg-[#f0f0f0] border border-[#f0f0f0] rounded-md mb-4">
+                <div key={s.id} className="flex items-center justify-between p-2 bg-[#f0f0f0] border border-[#f0f0f0] rounded-md mb-4">
                     <div className='flex flex-col gap-2'>
                         <h1 className='font-bold'>{s.name}</h1>
 
                         <div className='flex items-center gap-2 text-gray-700'>
-                            <div><span className='font-semibold'>Admission No:</span>{s.adm_no}</div>
-                            <div><span className='font-semibold'>Class & Sec:</span>{`${s.classes.name}${s.sections?.name && `-${s.sections.name}`}`}</div>
-                            <div><span className='font-semibold'>Roll No:</span>{s.roll_no}</div>
+                            <div><span className='font-semibold'>Adm. No: </span>{s.adm_no}</div>
+                            <div><span className='font-semibold'>Class: </span>{`${s.classes.name}${s.sections?.name && `-${s.sections.name}`}`}</div>
+                            <div><span className='font-semibold'>Roll No: </span>{s.roll_no}</div>
                         </div>
                     </div>
                     <div>

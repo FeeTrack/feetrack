@@ -1,6 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import ExcelJS from 'exceljs';
+import { createClientSupabase } from '@/utils/supabase/client';
 
 import Modal from '@/components/Modal';
 import CreateClassForm from './CreateClassForm';
@@ -23,6 +25,8 @@ export default function ClassesClient({ classes: initial }) {
   useEffect(() => {
     setClasses(initial);
   }, [initial]);
+
+  const supabase = createClientSupabase();
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -54,6 +58,62 @@ export default function ClassesClient({ classes: initial }) {
     }
   }
 
+  const downloadExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Classes");
+
+    sheet.columns = [
+      { header: "Sr.", key: "sr", width: 6 },
+      { header: "Class", key: "class", width: 15 },
+      { header: "Sections", key: "sections", width: 25 }
+    ];
+
+    // ⭐ Bold header row (Row 1)
+    sheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+    });
+
+    classes.forEach((c, index) => {
+      const row = sheet.addRow({
+        sr: index + 1,
+        class: c.name,
+        sections: c.sections.length > 0 ? c.sections.map(s => s.name).join(', ') : '',
+      });
+
+      row.eachCell((cell) => {
+          cell.alignment = { vertical: "top", wrapText: true };
+          cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+          };
+      });
+      
+      // Center align the Sr. column
+      row.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Classes_${new Date().toLocaleDateString('en-IN')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const [openDelete, setOpenDelete] = useState(false);
   const [deleteClass, setDeleteClass] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -64,16 +124,18 @@ export default function ClassesClient({ classes: initial }) {
     try {
       setOpenDelete(false);
       setTimeout(() => setDeleting(true), 200); // Delay showing spinner to avoid flicker for fast operations
-      const res = await fetch(`/api/classes/${classId}`, {
-        method: 'DELETE'
-      })
-      const data = await res.json()
-  
-      if (!res.ok) {
-        toast.error("Failed to delete class: " + (data.error || res.statusText));
+
+      const {error} = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classId);
+
+      if (error) {
+        console.error(error.message)
+        toast.error('Failed to delete class.')
         return;
       }
-      // Success
+
       toast.success(`Successfully Deleted Class: ${className}`);
       setClasses(prev => prev.filter(c => c.id !== classId));
     } catch (error) {
@@ -109,7 +171,7 @@ export default function ClassesClient({ classes: initial }) {
                       className='pl-8 w-full max-w-64 text-sm'
                     />
                   </div>
-                  <Button variant='outline' size='icon'>
+                  <Button variant='outline' size='icon' onClick={downloadExcel} >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>

@@ -142,7 +142,7 @@ input[type=number] {
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover {
-  background-color: #6040a9;
+  background-color: #7b7eda;
 }
 
 .sidebar::-webkit-scrollbar-track {

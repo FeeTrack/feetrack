@@ -2,6 +2,7 @@
 'use client';
 import { useState, useEffect, useActionState } from "react";
 import toast from "react-hot-toast";
+import ExcelJS from 'exceljs';
 import { months } from "@/utils/constants/backend";
 import { filterPaymentsAction } from "./actions";
 
@@ -214,6 +215,69 @@ export default function PaymentsClient({ profile, recentPayments }) {
         setLoading(false);
     }
 
+    const downloadExcel = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet("Payments");
+
+        sheet.columns = [
+            { header: "Sr.", key: "sr", width: 6 },
+            { header: "Receipt No.", key: "receipt_no", width: 15 },
+            { header: "Student Name", key: "student", width: 25 },
+            { header: "Class", key: "class", width: 15 },
+            { header: "Amount", key: "amount", width: 10 },
+            { header: "Date", key: "date", width: 12 },
+        ];
+
+        // ⭐ Bold header row (Row 1)
+        sheet.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.border = {
+                top: { style: "thin" },
+                left: { style: "thin" },
+                bottom: { style: "thin" },
+                right: { style: "thin" }
+            };
+            cell.alignment = { vertical: "middle", wrapText: true };
+        });
+
+        payments.forEach((p, index) => {
+            const row = sheet.addRow({
+            sr: index + 1,
+            receipt_no: p.receipt_no,
+            student: p.students?.name,
+            class: `${p.students?.classes?.name}${p.students?.sections?.name ? `-${p.students.sections.name}` : ''}`,
+            amount: p.amount,
+            date: new Date(p.created_at).toLocaleDateString("en-IN"),
+            });
+
+            // Style each cell
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: "top", wrapText: true };
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" }
+                };
+            });
+            
+            // Center align the Sr. column
+            row.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Payments_${new Date().toLocaleDateString('en-IN')}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const handleDelete = async (paymentId, receiptNo) => {
         if (!paymentId) return;
 
@@ -304,7 +368,7 @@ export default function PaymentsClient({ profile, recentPayments }) {
                                         className='pl-8 w-full max-w-64 text-sm'
                                     />
                                 </div>
-                                <Button variant='outline' size='icon'>
+                                <Button variant='outline' size='icon' onClick={downloadExcel} >
                                     <Download className="h-4 w-4" />
                                 </Button>
                             </div>

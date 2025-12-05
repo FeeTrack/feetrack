@@ -157,7 +157,7 @@ export default function DashboardContent({profile}) {
             {/* Stats */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 {statCards.map((stat, index) => (
-                    <Card key={index} className='shadow-md border-gray-300'>
+                    <Card key={index} className='shadow-md border-gray-300 hover:shadow-lg'>
                         <CardHeader className='flex flex-row-reverse md:flex-row items-center justify-end gap-2 md:justify-between '>
                             <CardTitle className='font-medium text-gray-800'>
                                 {stat.title}

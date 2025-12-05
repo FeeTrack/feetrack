@@ -86,6 +86,64 @@ export default function StaffClient({profile, staff: inital}) {
     setEditStaff(null)
   }
 
+  const downloadExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Staff");
+
+    sheet.columns = [
+      { header: "Sr.", key: "sr", width: 6 },
+      { header: "Staff Name", key: "name", width: 20 },
+      { header: "Designation", key: "designation", width: 20 },
+      { header: "Mobile No.", key: "mobile_no", width: 15 },
+    ];
+
+    // ⭐ Bold header row (Row 1)
+    sheet.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+        };
+        cell.alignment = { vertical: "middle", wrapText: true };
+    });
+
+    allStaff.forEach((t, index) => {
+      const row = sheet.addRow({
+        sr: index + 1,
+        route: t.name,
+        monthly_fee: t.monthly_fee,
+        vehicle_no: t.vehicle_no
+      });
+
+      row.eachCell((cell) => {
+          cell.alignment = { vertical: "top", wrapText: true };
+          cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+          };
+      });
+      
+      // Center align the Sr. column
+      row.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Staff_${new Date().toLocaleDateString('en-IN')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const [openDelete, setOpenDelete] = useState(false);
   const [deleteStaff, setDeleteStaff] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -149,7 +207,7 @@ export default function StaffClient({profile, staff: inital}) {
                 className="pl-8 w-full max-w-64 text-sm"
               />
             </div>
-            <Button variant='outline' size='icon'>
+            <Button variant='outline' size='icon' onClick={downloadExcel} >
               <Download className="h-4 w-4" />
             </Button>
           </div>
