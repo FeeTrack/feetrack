@@ -38,7 +38,7 @@ const ToolHeader = ({pageName, profile}) => {
     };
 
     return (
-        <header className="sticky top-0 flex h-16 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-4 shadow-sm sm:px-6 lg:px-8 z-10 ">
+        <header className="sticky top-0 flex h-14 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-4 shadow-sm sm:px-6 lg:px-8 z-10 ">
             <div className="flex items-center gap-x-2 xs:gap-x-4">
                 <button type="button" className='lg:hidden' onClick={() => setIsSheetOpen(true)}>
                     <Menu className="h-5 w-5"/>
@@ -52,15 +52,15 @@ const ToolHeader = ({pageName, profile}) => {
                 </div>
 
                 {/* Page Title */}
-                <h2 className="md:text-xl font-semibold capitalize">{pageTitle}</h2>
+                <h2 className="text-lg md:text-xl font-semibold capitalize">{pageTitle}</h2>
             </div>
             
 
-            <div className="flex items-center gap-x-2 sm:gap-x-4">
+            <div className="flex items-center gap-x-4">
                 {profile?.schools?.plan === 'free' ? (
-                    <button className={`px-2 py-1 text-xs sm:text-sm text-gray-800 font-medium rounded-full ${profile?.schools?.plan === 'free' ? 'bg-gray-200 hover:bg-gray-300' : 'bg-primary hover:bg-secondary'}`} onClick={() => setShowPlanModal(true)}>Free Trial</button>
+                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-gray-800 font-medium rounded-full bg-gray-200 hover:bg-gray-300" onClick={() => setShowPlanModal(true)}>Free Trial</button>
                 ) : (
-                    <button className={`px-2 py-1 text-xs sm:text-sm text-white rounded-full ${profile?.schools?.plan === 'free' ? 'bg-gray-200 hover:bg-gray-300' : 'bg-primary hover:bg-secondary'}`} onClick={() => setShowPlanModal(true)}>Pro</button>
+                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-white rounded-full bg-primary hover:bg-secondary" onClick={() => setShowPlanModal(true)}>Pro</button>
                 )}
                 
                 {showPlanModal && (

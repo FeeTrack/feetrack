@@ -10,7 +10,10 @@ import {
 
 const navigation = [
     { name: 'Dashboard', href: '/user/dashboard', icon: Home },
-    { name: 'Students', href: '/user/students', icon: Users },
+    { name: 'Students', icon: Users, submenu: [
+        { name: 'All Students', href: '/user/students/all-students' },
+        { name: 'Migration/Progression', href: '/user/students/migration' },
+    ] },
     { name: 'Fees', icon: IndianRupee, submenu: [
         { name: 'Collect Fees', href: '/user/fees/collect' },
         { name: 'Class-wise Fees', href: '/user/fees/class-wise-fees' },

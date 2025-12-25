@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getUser } from '@/utils/supabase/supabaseQueries';
 
 import { createInvoicesForStudent } from '@/utils/billing/createInvoicesForStudent';
+import { createBulkInvoicesForStudents } from '@/utils/billing/createBulkInvoicesForStudents';
 
 export async function createStudentAction(prevState, formData) {
   const supabase = await createServerSupabase()
@@ -14,8 +15,8 @@ export async function createStudentAction(prevState, formData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!name) return { error: 'Student name is required.' };
 
-  const className = String(formData.get('class') ?? '').trim();
-  if (!className) return { error: 'Class is required.' };
+  const classId = String(formData.get('class') ?? '').trim();
+  if (!classId) return { error: 'Class is required.' };
 
   const section = String(formData.get('section') ?? '').trim();
   if (!section) return { error: 'Section is required.' };
@@ -50,7 +51,7 @@ export async function createStudentAction(prevState, formData) {
       .from('fee_structures')
       .select('id')
       .eq('session_id', session_id)
-      .eq('class_id', className)
+      .eq('class_id', classId)
       .limit(1)
       .single();
 
@@ -64,7 +65,7 @@ export async function createStudentAction(prevState, formData) {
     .from('students')
     .insert({
       name,
-      class_id: className,
+      class_id: classId,
       section_id: section,
       adm_no: adm_no,
       roll_no: rollNo || null,
@@ -114,7 +115,7 @@ export async function updateStudentAction(prevState, formData) {
   if (!name) {
     return { error: 'Student name is required.' };
   }
-  const className = String(formData.get('class') ?? '').trim();
+  const classId = String(formData.get('class') ?? '').trim();
   const section = String(formData.get('section') ?? '').trim();
   const rollNo = String(formData.get('roll_no') ?? '').trim();
   const father_name = String(formData.get('father_name') ?? '').trim();
@@ -132,7 +133,7 @@ export async function updateStudentAction(prevState, formData) {
     .from('students')
     .update({
       name,
-      class_id: className || null,
+      class_id: classId || null,
       section_id: section || null,
       roll_no: rollNo || null,
       father_name: father_name || null,
@@ -213,4 +214,75 @@ export async function filterStudentsAction(prevState, formData) {
   }
 
   return { filteredStudentsResponse: filteredStudents, status: 'success' };
+}
+
+export async function bulkInsertAction(studentsData = []) {
+  const supabase = await createServerSupabase()
+
+  const sessionId = studentsData[0].session_id
+  const currentSession = studentsData[0].currentSession
+
+  const genFeeStudents = studentsData.filter(s => s.gen_fee === 1)
+
+  const classIdNames = [...new Set(genFeeStudents.map(s => ({class_id: s.class_id, class_name: s.class_name})))]
+  const classIds = [...new Set(genFeeStudents.map(s => s.class_id))]
+  const classesMap = new Map(classIdNames.map(c => [c.class_id, c.class_name]))
+
+  const {data: classFeeStruct, error: classFeeErr} = await supabase
+    .from('fee_structures')
+    .select('class_id')
+    .eq('session_id', sessionId)
+    .in('class_id', classIds)
+  if (classFeeErr) {
+    console.error(classFeeErr)
+    return { error: classFeeErr.message }
+  }
+
+  const classesWithFee = new Set(classFeeStruct.map(c => c.class_id))
+  const noFeeClassesIds = classIds.filter(c => !classesWithFee.has(c))
+  const noFeeClasses = noFeeClassesIds.map(c => {
+    const className = classesMap.get(c)
+    return (
+      className
+    )
+  })
+
+  if (noFeeClasses.length) {
+    return { error: 'Fee not created but applied in following classes: ' + noFeeClasses.join(', ')}
+  }
+
+  const insertStudentsData = studentsData.map(item => {
+    const { gen_fee, class_name, currentSession, ...rest } = item
+    return {
+      ...rest
+    }
+  })
+
+  const {data: students, error: studentError} = await supabase
+    .from('students')
+    .insert(insertStudentsData)
+    .select();
+
+  if (studentError) {
+    console.error(studentError)
+    return { error: studentError.message}
+  }
+
+  const studentsMap = new Map(students?.map(s => [s.adm_no, s.id]))
+
+  const finalGenFeeStudents = genFeeStudents.map(s => {
+    const student_id = studentsMap.get(String(s.adm_no))
+    return {
+      ...s,
+      id: student_id
+    }
+  })
+
+  const res = await createBulkInvoicesForStudents({students: finalGenFeeStudents, currentSession})
+  if (res.error) {
+    console.error(res.error)
+    return { error: { message: 'Students inserted but failed to generate fee.' } }
+  } else if (res.success) {
+    return { success: true }
+  }
 }

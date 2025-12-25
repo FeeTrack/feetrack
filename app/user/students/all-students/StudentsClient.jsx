@@ -21,7 +21,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Download, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
+import { Plus, Search, Download, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff, ArrowLeft, ArrowRight, File } from "lucide-react";
+import BulkUpload from "./BulkUpload";
 
 export default function StudentsClient({ profile, schoolType, recentAdmissions, showAdd: initialShowAdd }) {
   const [classes, setClasses] = useState([]);
@@ -41,6 +42,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
   const [editStudent, setEditStudent] = useState(null);
   const [showConfirmLeftOut, setShowConfirmLeftOut] = useState(false);
   const [leftOutStudent, setLeftOutStudent] = useState(null);
+  const [showBulk, setShowBulk] = useState(false);
 
   const { currentSession } = useSession();
 
@@ -118,7 +120,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
         .eq('school_id', profile.school_id)
         .order('adm_no', { ascending: false })
         .limit(1);
-      setAdmNo((admissionNo.length === 0 ? 1 : parseInt(admissionNo[0].adm_no) + 1));
+      setAdmNo((admissionNo.length === 0 ? 1 : admissionNo[0].adm_no + 1));
     }
     fetchAdmNo();
   }, [showAdd]);
@@ -177,6 +179,14 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
       return;
     }
     setShowAdd(true);
+  }
+
+  const handleBulkAdd = () => {
+    if (classes.length === 0) {
+      toast.error('Please set up classes first in the settings.')
+      return
+    }
+    setShowBulk(true)
   }
 
   useEffect(() => {
@@ -353,6 +363,13 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           </span>
         </button>
 
+        <button className="primary-btn" onClick={handleBulkAdd}>
+          <span className="flex items-center gap-2">
+            <File className="w-4 h-4" />
+            Bulk Insert Students
+          </span>
+        </button>
+
         <button className="primary-btn" onClick={() => setShowFilter(prev => !prev)}>
           <span className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
@@ -380,6 +397,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Section</label>
             <select name="section" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.section} onChange={handleFilterChange}>
+              <option value=''>Select Section</option>
               {filteredSections?.map(section => (
                 <option key={section.id} value={section.id} className='text-black'>
                   {section.name}
@@ -582,7 +600,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           action={(schoolType === 'school' || schoolType === 'college') ? 'Issue TC' : 'Mark Left-Out'}
             message={
             <>
-              Are you sure you want to mark the student <strong>{leftOutStudent.name}</strong> as {(schoolType === 'school' || schoolType === 'college') ? 'TC Issued' : 'Left Out'}?
+              Are you sure you want to mark the student <span className='font-medium'>{leftOutStudent.name}</span> as {(schoolType === 'school' || schoolType === 'college') ? 'TC Issued' : 'Left Out'}?
             </>
             }
         />
@@ -595,7 +613,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           action="Delete"
             message={
             <>
-              Are you sure you want to delete the student <strong>{deleteStudent.name}</strong>? This will <strong>permanently remove</strong> the student's record and associated data.
+              Are you sure you want to delete the student <span className='font-medium'>{deleteStudent.name}</span>? This will <span className='font-medium'>permanently remove</span> the student's record and associated data.
             </>
             }
         />
@@ -618,6 +636,17 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           sections={sections}
           schoolType={schoolType}
           transportRoutes={transportRoutes}
+        />
+      </Modal>
+
+      <Modal open={showBulk} onClose={() => setShowBulk(false)} title='Bulk Insert Students' ref={modalRef}>
+        <BulkUpload
+          onCancel={() => setShowBulk(false)}
+          classes={classes}
+          sections={sections}
+          transportRoutes={transportRoutes}
+          profile={profile}
+          currentSession={currentSession}
         />
       </Modal>
 

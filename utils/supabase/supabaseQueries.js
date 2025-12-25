@@ -71,6 +71,7 @@ export const fetchFeeHeadsAndClasses = cache(async () => {
     if (feeHeads.length === 0) {
         return { feeHeads: [], classes };
     }
+    const exceptTransportFeeHeads = feeHeads.filter(fh => fh.name !== 'Transport Fee')
 
-    return { feeHeads, classes };
+    return { feeHeads: exceptTransportFeeHeads, classes };
 })

@@ -4,16 +4,19 @@ import { useActionState } from 'react';
 import toast from 'react-hot-toast';
 
 import { searchStudentAction } from './actions';
+import { months } from '@/utils/constants/backend';
+import { useSession } from '@/Context/SessionContext';
 import CollectFeesForm from './CollectFeesForm';
 import Modal from '@/components/Modal';
 import Spinner from '@/components/Spinner';
-import { months } from '@/utils/constants/backend';
 
 export default function CollectFeesClient() {
     const [state, formAction, pending] = useActionState(searchStudentAction);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const { currentSession } = useSession()
     
     const students = state?.student ? [state.student] : state?.students ? state.students : [];
     
@@ -56,7 +59,7 @@ export default function CollectFeesClient() {
         if (!selectedStudent) return;
         const fetchInvoicePeriodsItems = async () => {
             setLoading(true);
-            const res = await fetch(`/api/fees/collect/invoices?student_id=${selectedStudent?.id}&session_id=${selectedStudent?.academic_sessions?.id}`, {
+            const res = await fetch(`/api/fees/collect/invoices?student_id=${selectedStudent?.id}&session_id=${currentSession?.id}`, {
                 method: 'GET'
             });
 
@@ -125,7 +128,7 @@ export default function CollectFeesClient() {
                             value={formData.admNoQuery}
                             onChange={handleChange}
                             disabled={formData.nameQuery.trim() !== ''}
-                            className="border rounded-2xl px-2 py-1 w-24 sm:w-40"
+                            className="border rounded-2xl px-2 py-1 w-24 sm:w-50"
                         />
                     </div>
                     <p className='text-center w-full md:max-w-fit'>Or</p>
@@ -137,7 +140,7 @@ export default function CollectFeesClient() {
                             value={formData.nameQuery}
                             onChange={handleChange}
                             disabled={formData.admNoQuery.trim() !== ''}
-                            className="border rounded-2xl px-2 py-1 w-24 sm:w-40"
+                            className="border rounded-2xl px-2 py-1 w-24 sm:w-50"
                         />
                     </div>
                 </div>

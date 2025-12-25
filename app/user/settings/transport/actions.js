@@ -75,13 +75,22 @@ export async function searchStudentAction(school_id, searchQuery) {
         }
         
         const query = (searchQuery).trim();
+        const admNoQuery = parseInt(query, 10)
         
-        const { data, error: err } = await supabase
+        let supabaseQuery = supabase
             .from('students')
             .select('id, name, classes(name), sections(name), roll_no, adm_no, route_id')
             .eq('school_id', school_id)
-            .or(`adm_no.ilike.%${query}%,name.ilike.%${query}%`)
-            .limit(10);
+
+        if (!isNaN(admNoQuery)) {
+            supabaseQuery = supabaseQuery.eq('adm_no', admNoQuery);
+        } else {
+            supabaseQuery = supabaseQuery.ilike('name', `%${query}%`)
+        }
+
+        supabaseQuery = supabaseQuery.limit(10);
+
+        const { data, error: err} = await supabaseQuery;
             
         if (err) {
             console.error('Database query error:', err);

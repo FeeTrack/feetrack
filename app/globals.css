@@ -91,7 +91,9 @@
 
   /* The Animation */
   .animate-fade-word {
-    animation: slide-fade-in 5s ease-in-out infinite;
+    animation-name: slide-fade-in;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
   }
 }
 

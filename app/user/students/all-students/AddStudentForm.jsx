@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { createStudentAction } from './actions';
 
 import Select from 'react-select';
-import { useSession } from '../../../Context/SessionContext';
+import { useSession } from '@/Context/SessionContext';
 
 export default function AddStudentForm({ onSubmit, onCancel, classes, sections, admNo, schoolType, transportRoutes }) {
   const [state, formAction, pending] = useActionState(createStudentAction, { error: null });
@@ -93,7 +93,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
 
             <div>
               <label className="block text-sm mb-1">Admission No</label>
-              <input name="adm_no" className="w-full border read-only:text-[#888] rounded px-2 py-1" value={state?.student?.adm_no ? parseInt(state.student.adm_no) + 1 : admNo} readOnly />
+              <input name="adm_no" className="w-full border read-only:text-[#888] rounded px-2 py-1" value={state?.student?.adm_no ? state.student.adm_no + 1 : admNo} readOnly />
             </div>
 
             <div>
@@ -186,7 +186,7 @@ export default function AddStudentForm({ onSubmit, onCancel, classes, sections, 
             </div>
 
             <div>
-              <label className='flex items-center gap-1 text-sm ml-1'>
+              <label className='flex items-center gap-1 text-sm ml-1 max-w-fit'>
                 <input type='checkbox' name='gen_fee' />
                 <p>Generate Fee Based on Class</p>
               </label>

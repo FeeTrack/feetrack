@@ -2,9 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { useActionState } from 'react';
 import { createFeeAction } from './actions';
+import { useSession } from '@/Context/SessionContext';
+import { months } from '@/utils/constants/backend';
 
 export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) {
   const [applyLate, setApplyLate] = useState(false);
+  const [createInstallments, setCreateInstallments] = useState(false);
   const [checkedClass, setCheckedClass] = useState({});
   const [state, formAction, pending] = useActionState(createFeeAction, { error: null });
 
@@ -15,9 +18,24 @@ export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) 
     { duration: 'once_per_student', months: 'Apr' },
   ]
 
+  const {currentSession} = useSession()
+  const sessionStartYear = parseInt(currentSession?.name.split('-')[0]);
+
+  const installmentStartOptions = months.map(m => ({
+    label: m.name,
+    value: m.number <= 3 ? `${m.name}-${sessionStartYear + 1}` : `${m.name}-${sessionStartYear}`
+  }))
+
   const [formData, setFormData] = React.useState({
     name: "",
-    duration: "",
+    applyPeriod: "",
+    totalInstallments: 0,
+    installment1Starts: '',
+    installment2Starts: '',
+    installment3Starts: '',
+    installment4Starts: '',
+    installment5Starts: '',
+    installment6Starts: '',
     due_date: "",
   });
 
@@ -30,7 +48,7 @@ export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) 
 
   useEffect(() => {
       if (state?.status === 'success') {
-        setFormData({ name: "", duration: "", due_date: "" });
+        setFormData({ name: "", applyPeriod: "", due_date: "" });
         setApplyLate(false);
         setCheckedClass({});
       }
@@ -48,9 +66,9 @@ export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) 
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Duration</label>
-          <select name="duration" required value={formData.duration} onChange={handleChange} className="w-full border rounded px-2 py-1">
-            <option value="">Select Duration</option>
+          <label className="block text-sm mb-1">Applied Every</label>
+          <select name="applyPeriod" required value={formData.applyPeriod} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Select Period</option>
             <option value="monthly">Monthly</option>
             <option value="half_yearly">Half Yearly</option>
             <option value="yearly">Yearly</option>
@@ -60,16 +78,55 @@ export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) 
 
         <div className='flex items-center gap-4 md:gap-8'>
           <label className="flex flex-col gap-1">
-            <span className='font-medium'>Due Date (Optional)</span>
-            <span className="text-xs text-gray-500">
+            <h2>Due Date (Optional)</h2>
+            <p className="text-xs text-gray-500">
               Day of the month by which fee should be received.
-            </span>
+            </p>
           </label>
           <div className='flex items-center gap-2'>
-            <input name="due_date" type="number" min="1" max="28" placeholder='15' value={formData.due_date} onChange={handleChange} className="border rounded px-2 py-1 w-6 md:w-10 placeholder:italic" />
-            <p className='text-gray-600 italic transition-all duration-200'>{dueMonths.find(month => month.duration === formData.duration)?.months}</p>
+            <input name="due_date" type="number" min="1" max="28" placeholder='15' value={formData.due_date} onChange={handleChange} className="border rounded px-2 py-1 w-10 placeholder:italic" />
+            <p className='text-gray-600 italic transition-all duration-200'>{dueMonths.find(month => month.duration === formData.applyPeriod)?.months}</p>
           </div>
         </div>
+
+        <div className='w-full flex flex-col md:flex-row md:items-center gap-3 md:gap-4'>
+          <div className="flex items-center gap-2">
+            <input id='createInstallments' name="createInstallments" type="checkbox" checked={createInstallments} onChange={(e) => setCreateInstallments(e.target.checked)} />
+            <label htmlFor="createInstallments">Create Installments?</label>
+          </div>
+
+          {createInstallments && (
+            <div>
+              <select name='totalInstallments' required value={formData.totalInstallments} onChange={handleChange} className='w-full border rounded px-2 py-1'>
+                <option value=''>Select Total Installments</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+                <option value={6}>6</option>
+              </select>
+            </div>
+          )}
+        </div>  
+
+        {createInstallments && formData.totalInstallments && (
+          <div className='w-full flex flex-col gap-3'>
+            {Array.from({ length: formData.totalInstallments }, (_, i) => (
+              <div key={i}>
+                <label className='block mb-1'>Installment {i + 1} Starts: </label>
+
+                <select name={`installment${i + 1}Starts`} value={formData[`installment${i + 1}Starts`]} onChange={handleChange} className='w-full border rounded px-2 py-1'>
+                  <option value=''>Select Month</option>
+                  {installmentStartOptions.map(pp => (
+                    <option key={pp.label} value={pp.value}>
+                      {pp.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}  
 
         <div className="flex items-center gap-2">
           <input id="applyLate" name="applyLate" type="checkbox" checked={applyLate} onChange={(e) => setApplyLate(e.target.checked)} />
@@ -89,7 +146,7 @@ export default function CreateFeeHeadForm({ classes = [], onSubmit, onCancel }) 
         )}
 
         <div>
-          <h3 className="font-bold mb-2">Class Wise Amount</h3>
+          <h3 className="font-medium mt-4 mb-2">Class Wise Amount</h3>
           <div className="grid grid-cols-1 gap-2">
             {classes.map((c) => (
               <div key={c.id} className="flex items-center gap-4">

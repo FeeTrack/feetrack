@@ -2,7 +2,7 @@ import { getUser } from '@/utils/supabase/supabaseQueries';
 import { createServerSupabase } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
-import UserLayout from '../UserLayout';
+import UserLayout from '../../UserLayout';
 import StudentsClient from './StudentsClient';
 
 export const metadata = {
@@ -39,7 +39,7 @@ export default async function StudentsPage({searchParams}) {
       .eq('school_id', profile.school_id)
       .eq('session_id', currentSession?.id)
       .order("created_at", { ascending: false })
-      .order('name', { ascending: true })
+      .order('adm_no', { ascending: false })
       .limit(10);
   
   return (

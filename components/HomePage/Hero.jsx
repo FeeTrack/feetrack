@@ -8,6 +8,7 @@ export default function Hero() {
     const [termIndex, setTermIndex] = useState(0)
     const spanRef = useRef(null)
     const [width, setWidth] = useState(0)
+    const [startAnimation, setStartAnimation] = useState(false)
 
     useEffect(() => {
         // Measure width of current term
@@ -17,6 +18,7 @@ export default function Hero() {
     }, [termIndex])
 
     useEffect(() => {
+        setStartAnimation(true)
         const autoTermChange = setInterval(() => {
             setTermIndex((prev) => prev === terms.length - 1 ? 0 : prev + 1);
         }, 5000)
@@ -36,7 +38,8 @@ export default function Hero() {
                         <span 
                             ref={spanRef}
                             key={termIndex} 
-                            className="text-primary inline-block whitespace-nowrap animate-fade-word" 
+                            className={`text-primary inline-block whitespace-nowrap ${startAnimation ? 'animate-fade-word' : ''}`}
+                            style={{animationDuration: '5s'}}
                         >
                             {terms[termIndex]}
                         </span>

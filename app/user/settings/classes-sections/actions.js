@@ -37,6 +37,21 @@ export async function createClassAction(prevState, formData) {
         }
     }
 
+    const {data: existingClasses, error: existClassErr } = await supabase
+        .from('classes')
+        .select('name')
+        .eq('school_id', profile.school_id)
+    if (existClassErr) {
+        console.error(existClassErr)
+        return { error: 'Error fetching existing classes.'}
+    }
+
+    const existingClassNames = existingClasses.map(c => c.name)
+    const nameExists = existingClassNames.some(c => c === className)
+    if (nameExists) {
+        return { error: 'Class name already exists.'}
+    }
+
     const { data: classData, error: classErr } = await supabase
         .from('classes')
         .insert({
@@ -94,6 +109,21 @@ export async function updateClassAction(prevState, formData) {
         const v = String(value ?? '').trim();
         sections.push({ action: 'update', id, name: v });
         }
+    }
+
+    const {data: existingClasses, error: existClassErr } = await supabase
+        .from('classes')
+        .select('name')
+        .eq('school_id', profile.school_id)
+    if (existClassErr) {
+        console.error(existClassErr)
+        return { error: 'Error fetching existing classes.'}
+    }
+
+    const existingClassNames = existingClasses.map(c => c.name)
+    const nameExists = existingClassNames.some(c => c === className)
+    if (nameExists) {
+        return { error: 'Class name already exists.'}
     }
 
     const { data: updatedClass, error: updateErr } = await supabase

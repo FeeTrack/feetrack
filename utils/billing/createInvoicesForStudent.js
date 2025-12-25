@@ -245,11 +245,6 @@ export async function createInvoicesForStudent({student, currentSession}) {
 
     if (itemInsertError) {
         await supabase
-            .from('invoice_items')
-            .delete()
-            .eq('student_id', student.id)
-            .eq('session_id', currentSession.id);
-        await supabase
             .from('invoices')
             .delete()
             .eq('student_id', student.id)

@@ -362,10 +362,10 @@ export default function PaymentsClient({ profile, recentPayments }) {
                                 <div className="relative flex-1 sm:flex-initial">
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input 
-                                        placeholder="Search in the table"
+                                        placeholder="Search by receipt no or name"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className='pl-8 w-full max-w-64 text-sm'
+                                        className='pl-8 w-full max-w-64 md:w-72 text-sm'
                                     />
                                 </div>
                                 <Button variant='outline' size='icon' onClick={downloadExcel} >

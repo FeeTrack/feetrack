@@ -12,9 +12,9 @@ export default function UserLayoutClient({ children, pageName, profile }) {
                     <Sidebar profile={profile} />
                 </div>
 
-                <div className="flex flex-1 flex-col lg:ml-64 xl:ml-[320px]">
+                <div className="flex flex-1 flex-col min-h-screen lg:ml-64 xl:ml-[320px]">
                     <ToolHeader pageName={pageName} profile={profile} />
-                    <main className="flex-1 bg-gray-50 h-full overflow-y-auto">
+                    <main className="flex-1 bg-gray-50 overflow-y-auto">
                         <div className="py-6 px-4 sm:px-6 lg:px-8">
                             {children}
                         </div>

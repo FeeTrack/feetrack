@@ -14,7 +14,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 export default function ManageStudentTransport({ profile, transportRoutes, onSubmit, onCancel }) {
     const [students, setStudents] = useState([])
     const [selectedStudent, setSelectedStudent] = useState(null)
-    const [selectedRoute, setSelectedRoute] = useState({})
+    const [selectedRoute, setSelectedRoute] = useState(null)
     const [selectedMonths, setSelectedMonths] = useState([])
     const [transFeeHeadId, setTransFeeHeadId] = useState('')
     const [existingTransPeriods, setExistingTransPeriods] = useState([])
@@ -74,7 +74,7 @@ export default function ManageStudentTransport({ profile, transportRoutes, onSub
     const handleSelectStudent = (s) => {
         try {
             setStudents([])
-            setSelectedRoute({})
+            setSelectedRoute(null)
             setSelectedMonths([])
         } finally {
             setSelectedStudent(s)
