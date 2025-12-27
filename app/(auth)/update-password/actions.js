@@ -2,7 +2,7 @@
 
 import { createServerSupabase } from "@/utils/supabase/server"
 
-export async function verifyCodeAction(code) {
+export async function exchangeCodeAction(code) {
     if (!code) {
         return { error: 'Verificaion code is required' }
     }
