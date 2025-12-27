@@ -1,20 +1,26 @@
 'use server';
 import { createServerSupabase } from "@/utils/supabase/server";
-import { getUser } from "@/utils/supabase/supabaseQueries";
+import { getUser, checkFeatureLimit } from "@/utils/supabase/supabaseQueries";
 import { revalidatePath } from "next/cache";
 
 export async function addStaffAction(prevState, formData) {
     const name = formData.get('name').trim();
     const designation = formData.get('designation').trim();
     const mobile_no = formData.get('mobile_no').trim();
-    let salary = formData.get('salary').trim();
+    let salary = formData.get('salary').trim() || null;
 
     if (salary) {
         salary = Number(salary);
     }
 
-    const supabase = await createServerSupabase();
     const profile = await getUser();
+
+    const limitCheck = await checkFeatureLimit(profile.school_id, 'staff')
+    if (!limitCheck.allowed) {
+        return { error: { message: 'Staff limit reached. Please upgrade your plan to add more students.'}}
+    }
+
+    const supabase = await createServerSupabase();
 
     const {error} = await supabase
         .from('staff')

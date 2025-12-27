@@ -27,7 +27,7 @@ export default async function LoginPage() {
 
             <div className="flex flex-col text-sm gap-1">
                 <h2 className="text-sm font-bold">© FeeTrack</h2>
-                <p>You may react out to us at: feetrack[at]gmail.com</p>
+                <p>You may react out to us at: contact.feetrack[at]gmail.com</p>
             </div>
         </div>
       </div>

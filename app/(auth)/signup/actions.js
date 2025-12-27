@@ -29,16 +29,10 @@ export async function signupAction(prevState, formData) {
         return { error: "Failed to create account. Please try again." }
     }
 
-    const today = new Date();
-    today.setDate(today.getDate() + 6);
-    today.setHours(23,59,59,999);
-
-    const valid_till = today.toISOString().split('T')[0];
-
     const { data: school, error: schoolError } = await supabase
         .from('schools')
         .insert([
-            { name: schoolName, address: schoolAddress, type: schoolType, created_by: user.id, valid_till }
+            { name: schoolName, address: schoolAddress, type: schoolType, created_by: user.id }
         ])
         .select()
         .single();

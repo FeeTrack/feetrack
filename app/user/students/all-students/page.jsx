@@ -2,6 +2,7 @@ import { getUser } from '@/utils/supabase/supabaseQueries';
 import { createServerSupabase } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
+import { checkFeatureLimit } from '@/utils/supabase/supabaseQueries';
 import UserLayout from '../../UserLayout';
 import StudentsClient from './StudentsClient';
 
@@ -13,11 +14,16 @@ export const metadata = {
 export default async function StudentsPage({searchParams}) {
     const supabase = await createServerSupabase();
     const params = await searchParams;
-    const showAdd = params.showAdd === 'true' ? true : false;
+    let showAdd = params.showAdd === 'true' ? true : false;
 
     const profile = await getUser();
     if (!profile) {
       redirect('/login');
+    }
+
+    const limitCheck = await checkFeatureLimit(profile.school_id, 'students')
+    if (!limitCheck.allowed) {
+      showAdd = false
     }
 
     const { data: schType } = await supabase

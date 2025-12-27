@@ -1,6 +1,7 @@
 "use server"
 import { cache } from "react";
 import { createServerSupabase } from "./server";
+import { PLANS, getPlanLimits, checkLimit, checkAccess } from "@/config/plans";
 
 export const getUser = cache(async () => {
     const supabase = await createServerSupabase();
@@ -26,17 +27,20 @@ export const getUser = cache(async () => {
         return null;
     }
 
-    const validTill = new Date(profile?.schools?.valid_till);
-    validTill.setHours(23,59,59,999); // set to end of the day
+    const schoolPlan = profile.schools?.plan
+    const planConfig = PLANS[schoolPlan.toUpperCase()]
 
-    const today = new Date();
-    today.setHours(0,0,0,0); // set to start of the day
+    if (planConfig?.hasExpiry) {
+        const validTill = new Date(profile?.schools?.valid_till)
+        validTill.setHours(23, 59, 59, 999)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
 
-    if (validTill < today) {
-        // if (profile?.schools?.plan !== 'free') {
-        console.error('School subscription has expired.');
-        await supabase.auth.signOut();
-        return null;
+        if (validTill < today) {
+            console.error('School subscription has expired.');
+            await supabase.auth.signOut();
+            return null;
+        }
     }
 
     return profile;
@@ -75,3 +79,53 @@ export const fetchFeeHeadsAndClasses = cache(async () => {
 
     return { feeHeads: exceptTransportFeeHeads, classes };
 })
+
+export async function checkFeatureLimit(schoolId, resource) {
+    const supabase = await createServerSupabase()
+
+    const { data: school } = await supabase
+        .from('schools')
+        .select('plan')
+        .eq('id', schoolId)
+        .single()
+    if (!school) return { allowed: false, error: 'School not found'}
+
+    let currentCount = 0
+
+    switch (resource) {
+        case 'students': {
+            const { count } = await supabase
+                .from('students')
+                .select('*', { count: 'exact', head: true })
+                .eq('school_id', schoolId)
+            
+            currentCount = count ?? 0
+            break
+        }
+        case 'staff': {
+            const { count } = await supabase
+                .from('staff')
+                .select('*', { count: 'exact', head: true })
+                .eq('school_id', schoolId)
+            
+            currentCount = count ?? 0
+            break
+        }
+    }
+    
+    return checkLimit(school.plan, resource, currentCount)
+}
+
+export async function checkFeatureAccess(schoolId, featureName) {
+    const supabase = await createServerSupabase()
+
+    const { data: school } = await supabase
+        .from('schools')
+        .select('plan')
+        .eq('id', schoolId)
+        .single()
+
+    if (!school) return { allowed: false, error: 'School not found' }
+
+    return checkAccess(school.plan, featureName)
+}

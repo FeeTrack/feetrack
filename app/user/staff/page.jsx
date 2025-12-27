@@ -1,4 +1,4 @@
-import { getUser } from "@/utils/supabase/supabaseQueries";
+import { checkFeatureAccess, getUser } from "@/utils/supabase/supabaseQueries";
 import { createServerSupabase } from '@/utils/supabase/server';
 
 import UserLayout from "../UserLayout";
@@ -22,6 +22,17 @@ export default async function StaffPage() {
             <UserLayout pageName='Staff'>
             <div className="w-full h-full flex justify-center items-center">
                 <h1>Unauthorized Access.</h1>
+            </div>
+            </UserLayout>
+        )
+    }
+    
+    const accessCheck = await checkFeatureAccess(profile.school_id, 'staffModule')
+    if (!accessCheck.allowed) {
+        return (
+            <UserLayout pageName='Staff'>
+            <div className="w-full h-full flex justify-center items-center">
+                <h1>This feature is not available in your current plan. Kindly upgrade to access this feature.</h1>
             </div>
             </UserLayout>
         )

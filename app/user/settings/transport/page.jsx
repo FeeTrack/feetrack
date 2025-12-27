@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/utils/supabase/server';
-import { getUser } from '@/utils/supabase/supabaseQueries';
+import { getUser, checkFeatureAccess } from '@/utils/supabase/supabaseQueries';
 import { redirect } from 'next/navigation';
 
 import UserLayout from '../../UserLayout';
@@ -14,6 +14,17 @@ export default async function TransportSetupPage() {
   const profile = await getUser();
   if (!profile) {
     redirect('/login')
+  }
+
+  const accessCheck = await checkFeatureAccess(profile.school_id, 'transportModule')
+  if (!accessCheck.allowed) {
+      return (
+          <UserLayout pageName='Transport'>
+          <div className="w-full h-full flex justify-center items-center">
+              <h1>This feature is not available in your current plan. Kindly upgrade to access this feature.</h1>
+          </div>
+          </UserLayout>
+      )
   }
 
   const supabase = await createServerSupabase();

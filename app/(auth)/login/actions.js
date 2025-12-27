@@ -31,15 +31,17 @@ export async function loginAction(prevState , formData) {
     return { error: 'Failed to retrieve plan data.'}
   }
 
-  const validTill = new Date(planData.valid_till);
-  validTill.setHours(23, 59, 59, 999);
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  if (validTill < today) {
-    await supabase.auth.signOut();
-    return { error: {code: 'PLAN_EXPIRED'}};
+  if (planData.valid_till) {
+    const validTill = new Date(planData.valid_till);
+    validTill.setHours(23, 59, 59, 999);
+  
+    const today = new Date();
+    today.setHours(0,0,0,0);
+  
+    if (validTill < today) {
+      await supabase.auth.signOut();
+      return { error: {code: 'PLAN_EXPIRED'}};
+    }
   }
 
   // on success, redirect to dashboard (session cookies are set by the server client)

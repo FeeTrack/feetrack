@@ -2,14 +2,20 @@
 'use server';
 import { createServerSupabase } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { getUser } from '@/utils/supabase/supabaseQueries';
+import { getUser, checkFeatureLimit } from '@/utils/supabase/supabaseQueries';
 
 import { createInvoicesForStudent } from '@/utils/billing/createInvoicesForStudent';
 import { createBulkInvoicesForStudents } from '@/utils/billing/createBulkInvoicesForStudents';
 
 export async function createStudentAction(prevState, formData) {
-  const supabase = await createServerSupabase()
   const profile = await getUser();
+
+  const limitCheck = await checkFeatureLimit(profile.school_id, 'staff')
+  if (!limitCheck.allowed) {
+      return { error: { message: 'Student limit reached. Please upgrade your plan to add more students.'}}
+  }
+
+  const supabase = await createServerSupabase()
   if (!profile) return { error: 'Not authenticated' };
 
   const name = String(formData.get('name') ?? '').trim();
@@ -39,7 +45,6 @@ export async function createStudentAction(prevState, formData) {
   adm_date = adm_date.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
   const route_id = formData.get('routeId') || null;
-  console.log(route_id)
 
   const month_fee_from = String(formData.get('month_fee_from') ?? '').trim();
   if (!month_fee_from) return { error: 'Please select when to apply monthly fees from.' };
@@ -86,7 +91,7 @@ export async function createStudentAction(prevState, formData) {
     const constraint = error.message.match(/constraint "(.*)"/)?.[1];
     if (constraint === "unique_roll_no_per_school_class_section") {
       const friendlyMessage = "A student with this roll number already exists.";
-      return { error: friendlyMessage };
+      return { error: { message: friendlyMessage} };
     }
 
     return { error: "Failed to add student. " + error.message };

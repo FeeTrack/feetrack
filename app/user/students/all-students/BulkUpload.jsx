@@ -7,11 +7,13 @@ import { bulkInsertAction } from "./actions";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import toast from "react-hot-toast";
+import { checkFeatureLimit } from "@/utils/supabase/supabaseQueries";
 
 export default function BulkUpload({onCancel, classes, sections, transportRoutes, profile, currentSession}) {
   const [students, setStudents] = useState([]);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false)
+  const [submitDisabled, setSubmitDisabled] = useState(false)
   const fileInputRef = useRef(null)
 
   const downloadTemplate = async () => {
@@ -362,6 +364,14 @@ export default function BulkUpload({onCancel, classes, sections, transportRoutes
       parsedStudents.push(data);
     });
 
+    const limitCheck = await checkFeatureLimit(profile.school_id, 'students')
+    const limit = limitCheck.limit
+    if (limit && parsedStudents.length > limit) {
+      toast.error('Student records exceed plan limit. Kindly upgrade to add more students.')
+      setSubmitDisabled(true)
+      return
+    }
+
     setStudents(parsedStudents);
     setErrors(validationErrors);
   };
@@ -528,7 +538,7 @@ export default function BulkUpload({onCancel, classes, sections, transportRoutes
               type="button"
               onClick={submitToBackend}
               className="primary-btn disabled:cursor-not-allowed"
-              disabled={students.length === 0 || errors.length != 0 || loading}
+              disabled={submitDisabled || students.length === 0 || errors.length != 0 || loading}
             >
               {loading ? 'Submitting…' : 'Submit to Database'}
             </button>

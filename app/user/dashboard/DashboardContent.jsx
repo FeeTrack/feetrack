@@ -127,7 +127,7 @@ export default function DashboardContent({profile}) {
         {
             title: 'Add Student',
             icon: Plus,
-            href: { pathname: '/user/students', query: { showAdd: true } },
+            href: { pathname: '/user/students/all-students', query: { showAdd: true } },
             color: 'border-indigo-300 hover:border-indigo-500',
         },
         {

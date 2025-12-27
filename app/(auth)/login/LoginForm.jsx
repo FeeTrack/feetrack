@@ -40,7 +40,7 @@ export default function LoginForm() {
                     <div>
                         <div className="flex items-center justify-between gap-2 text-gray-700 mb-2 text-sm font-medium">
                             <label htmlFor="password">Password</label>
-                            <Link href='/update-password' className="hover:underline text-gray-500">
+                            <Link href='/reset-password' className="hover:underline text-gray-500">
                                 Forgot password?                                
                             </Link>
                         </div>

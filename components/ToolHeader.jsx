@@ -58,9 +58,9 @@ const ToolHeader = ({pageName, profile}) => {
 
             <div className="flex items-center gap-x-4">
                 {profile?.schools?.plan === 'free' ? (
-                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-gray-800 font-medium rounded-full bg-gray-200 hover:bg-gray-300" onClick={() => setShowPlanModal(true)}>Free Trial</button>
+                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-gray-800 font-medium rounded-full bg-gray-200 hover:bg-gray-300" onClick={() => setShowPlanModal(true)}>Free Plan</button>
                 ) : (
-                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-white rounded-full bg-primary hover:bg-secondary" onClick={() => setShowPlanModal(true)}>Pro</button>
+                    <button className="hidden sm:block px-2 py-1 text-xs sm:text-sm text-white rounded-full bg-primary hover:bg-secondary" onClick={() => setShowPlanModal(true)}>{profile?.schools?.plan.split('-')[0].charAt(0).toUpperCase() + profile?.schools?.plan.split('-')[0].slice(1)}</button>
                 )}
                 
                 {showPlanModal && (
@@ -71,7 +71,7 @@ const ToolHeader = ({pageName, profile}) => {
                         title="Plan Details"
                         buttonAction="Contact Sales"
                         message={
-                        <>You're currently using the {profile?.schools?.plan === 'free' ? '7-day free trial' : 'Pro'} plan. If you wish to upgrade or have any query, please contact sales.</>
+                        <>You're currently using the {profile?.schools?.plan === 'free' ? 'Free' : profile?.schools?.plan.split('-')[0].charAt(0).toUpperCase() + profile?.schools?.plan.split('-')[0].slice(1)} plan. If you wish to upgrade or have any query, please contact sales.</>
                         }
                     />
                 )}

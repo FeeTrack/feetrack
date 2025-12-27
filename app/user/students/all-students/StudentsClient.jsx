@@ -8,6 +8,7 @@ import ExcelJS from 'exceljs';
 import { filterStudentsAction } from "./actions";
 import { updateStudentFeeStructure } from "@/utils/billing/updateStudentFeeStructure";
 import { leftOutStudentAction } from "./actions";
+import { checkFeatureLimit, checkFeatureAccess } from "@/utils/supabase/supabaseQueries";
 
 import AddStudentForm from "./AddStudentForm";
 import EditStudentForm from "./EditStudentForm";
@@ -146,7 +147,12 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
       return;
     }
     if (state?.error) {
-      toast.error(state?.error);
+      if (state.error.message) {
+        toast.error(state.error.message)
+      } else {
+        toast.error('Failed to add student.');
+        console.error(state.error)
+      }
     }
   }
 
@@ -173,17 +179,30 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
     });
   }
 
-  const handleAddStudent = () => {
+  const handleAddStudent = async () => {
     if (classes.length === 0) {
       toast.error("Please set up classes first in the settings.");
       return;
     }
+
+    const limitCheck = await checkFeatureLimit(profile.school_id, 'students')
+    if (!limitCheck.allowed) {
+      toast.error('Student limit reached. Please upgrade your plan to add more students.')
+      return
+    }
+    
     setShowAdd(true);
   }
 
-  const handleBulkAdd = () => {
+  const handleBulkAdd = async () => {
     if (classes.length === 0) {
       toast.error('Please set up classes first in the settings.')
+      return
+    }
+
+    const accessCheck = await checkFeatureAccess(profile.school_id, 'bulkInsert')
+    if (!accessCheck.allowed) {
+      toast.error('This feature is not available in your current plan. Kindly upgrade to access this feature.')
       return
     }
     setShowBulk(true)

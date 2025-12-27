@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Download, Edit, Trash2, ArrowLeft, ArrowRight } from "lucide-react";
+import { checkFeatureLimit } from '@/utils/supabase/supabaseQueries';
 
 export default function StaffClient({profile, staff: inital}) {
   const [allStaff, setAllStaff] = useState(inital);
@@ -78,6 +79,16 @@ export default function StaffClient({profile, staff: inital}) {
     if (modalRef.current) {
       modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
+
+  const handleAddStaff = async () => {
+    const limitCheck = await checkFeatureLimit(profile.school_id, 'staff')
+    if (!limitCheck.allowed) {
+      toast.error('Staff limit reached. Please upgrade your plan to add more students.')
+      return
+    }
+
+    setShowAdd(true)
   }
 
   const handleSubmit = () => {
@@ -178,7 +189,7 @@ export default function StaffClient({profile, staff: inital}) {
   return (
     <div className="space-y-6 w-full max-w-full">
       <div className='w-full flex items-center gap-4 flex-wrap'>
-          <button className="primary-btn" onClick={() => setShowAdd(true)}>
+          <button className="primary-btn" onClick={handleAddStaff}>
               <span className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Add Staff

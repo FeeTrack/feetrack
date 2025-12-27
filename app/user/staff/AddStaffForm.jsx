@@ -54,6 +54,10 @@ export default function AddStaffForm({ profile, onSubmit, onCancel }) {
       onSubmit();
     }
     if (state?.error) {
+      if (state.error.message) {
+        toast.error(state.error.message)
+        return
+      }
       console.error(state.error);
       toast.error('Error while adding staff.');
       return;

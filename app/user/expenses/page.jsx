@@ -1,4 +1,4 @@
-import { getUser } from "@/utils/supabase/supabaseQueries";
+import { getUser, checkFeatureAccess } from "@/utils/supabase/supabaseQueries";
 import { createServerSupabase } from '@/utils/supabase/server';
 
 import UserLayout from "../UserLayout";
@@ -11,12 +11,23 @@ export const metadata = {
 }
 
 export default async function ExpensesPage() {
-    const supabase = await createServerSupabase();
-
     const profile = await getUser();
     if (!profile) {
         redirect('/login')
     }
+
+    const accessCheck = await checkFeatureAccess(profile.school_id, 'expensesModule')
+    if (!accessCheck.allowed) {
+        return (
+            <UserLayout pageName='Expenses'>
+            <div className="w-full h-full flex justify-center items-center">
+                <h1>This feature is not available in your current plan. Kindly upgrade to access this feature.</h1>
+            </div>
+            </UserLayout>
+        )
+    }
+
+    const supabase = await createServerSupabase();
 
     const {data: expense_heads} = await supabase
         .from('expense_heads')
