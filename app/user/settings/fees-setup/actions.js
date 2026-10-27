@@ -2,6 +2,7 @@
 import { createServerSupabase } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getUser } from '@/utils/supabase/supabaseQueries';
+import { getCurrentSession } from '@/utils/session/currentSession';
 
 // Create Fee
 export async function createFeeAction(prevState, formData) {
@@ -9,14 +10,10 @@ export async function createFeeAction(prevState, formData) {
   const profile = await getUser();
   if (!profile) return { error: 'Not authenticated' };
 
-  const { data: sessionId, error: sessionErr } = await supabase
-    .from('academic_sessions')
-    .select('id')
-    .eq('is_active', true)
-    .single();
-
-  if (sessionErr || !sessionId?.id) {
-    return { error: 'Academic session not found. Please contact admin.' + sessionErr.message };
+  // Fees go into the session selected in the header
+  const sessionId = await getCurrentSession();
+  if (!sessionId?.id) {
+    return { error: 'Academic session not found. Please contact admin.' };
   }
   
   const name = String(formData.get('name') ?? '').trim();
@@ -113,13 +110,8 @@ export async function updateFeeAction(prevState, formData) {
   if (!profile) return { error: 'Not authenticated' };
 
 
-  const { data: sessionId, error: sessionErr } = await supabase
-    .from('academic_sessions')
-    .select('id')
-    .eq('is_active', true)
-    .single();
-
-  if (sessionErr || !sessionId?.id) {
+  const sessionId = await getCurrentSession();
+  if (!sessionId?.id) {
     return { error: 'Academic session not found. Please contact admin.' };
   }
 

@@ -1,92 +1,47 @@
 'use client';
-import { createContext, useContext, useState, useEffect } from "react";
-import { createClientSupabase } from "@/utils/supabase/client";
+import { createContext, useContext, useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { setSelectedSessionAction } from "@/app/user/sessionActions";
 
 const SessionContext = createContext();
 
-export function SessionProvider({children}) {
-    const [availableSessions, setAvailableSessions] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const cached = sessionStorage.getItem('available_sessions');
-            return cached ? JSON.parse(cached) : [];
-        }
-        return [];
-    });
-    const [currentSession, setCurrentSessionState] = useState(null);
-    const [sessionLoading, setSessionLoading] = useState(false);
-    const [error, setError] = useState(null);
+// Sessions and the selected session come from the server (app/user/layout.jsx), which reads
+// the selection from a cookie. Switching sets that cookie and refreshes, so server-rendered
+// pages and client components always agree on the session.
+export function SessionProvider({ children, initialSessions = [], initialSession = null }) {
+    const router = useRouter();
+    const [currentSession, setCurrentSessionState] = useState(initialSession);
+    const [switching, startTransition] = useTransition();
 
+    // Keep in sync when the server sends a new selection (after a refresh or a fresh login)
     useEffect(() => {
-        if (availableSessions.length === 0) {
-            fetchSessions();
-        } else {
-            // If we have cached sessions, restore the current session
-            const storedSessionId = sessionStorage.getItem('selected_session_id');
-            if (storedSessionId) {
-                const session = availableSessions.find(s => s.id === storedSessionId);
-                if (session) {
-                    setCurrentSessionState(session);
-                }
-            } else {
-                const activeSession = availableSessions.find(s => s.is_active);
-                if (activeSession) {
-                    setCurrentSessionState(activeSession);
-                }
-            }
-        }
-    }, []);
-
-    const fetchSessions = async () => {
-        try {
-            setSessionLoading(true);
-            setError(null);
-
-            const supabase = createClientSupabase();
-
-            const { data: sessionsData, error } = await supabase
-                .from('academic_sessions')
-                .select('id, name, start_date, end_date, is_active')
-                .order('name', { ascending: false });
-
-            if (error) throw error;
-
-            if (!sessionsData || sessionsData.length === 0) {
-                throw new Error('No academic sessions found. Please create a session.')
-            }
-
-            setAvailableSessions(sessionsData);
-            // Cache sessions in sessionStorage
-            sessionStorage.setItem('available_sessions', JSON.stringify(sessionsData));
-
-            const storedSessionId = sessionStorage.getItem('selected_session_id')
-
-            let selectedSession = null;
-            if (storedSessionId) {
-                selectedSession = sessionsData.find(s => s.id === storedSessionId);
-            } else {
-                selectedSession = sessionsData.find(s => s.is_active);
-            }
-
-            setCurrentSessionState(selectedSession);
-        } catch (error) {
-            console.error('Error fetching sessions:', error);
-            setError(error.message);
-        } finally {
-            setSessionLoading(false);
-        }
-    }
+        setCurrentSessionState(initialSession);
+    }, [initialSession?.id]);
 
     const setCurrentSession = (session) => {
+        if (!session || session.id === currentSession?.id) return;
+
+        const previous = currentSession;
         setCurrentSessionState(session);
-        sessionStorage.setItem('selected_session_id', session.id);
+        startTransition(async () => {
+            const res = await setSelectedSessionAction(session.id);
+            if (res?.error) {
+                setCurrentSessionState(previous);
+                toast.error(res.error);
+                return;
+            }
+            router.refresh();
+        });
     }
 
     const value = {
-        availableSessions,
+        availableSessions: initialSessions,
+        activeSession: initialSessions.find(s => s.is_active) || null,
         currentSession,
         setCurrentSession,
-        sessionLoading,
-        error,
+        sessionLoading: switching,
+        error: initialSessions.length === 0 ? 'No academic sessions found. Please create a session.' : null,
     }
 
     return (
@@ -95,7 +50,7 @@ export function SessionProvider({children}) {
         </SessionContext.Provider>
     )
 }
-    
+
 export function useSession() {
     const context = useContext(SessionContext);
     if (context === undefined) {

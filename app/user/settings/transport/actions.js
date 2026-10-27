@@ -1,7 +1,8 @@
 'use server'
 import { createServerSupabase } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
-import { months } from "@/utils/constants/backend"
+import { getUser } from "@/utils/supabase/supabaseQueries"
+import { getCurrentSession } from "@/utils/session/currentSession"
 
 export async function addTransportRoutesAction(school_id, addedRoutes) {
     if (!Array.isArray(addedRoutes) || addedRoutes.length === 0) {
@@ -51,6 +52,9 @@ export async function addTransportRoutesAction(school_id, addedRoutes) {
 }
 
 export async function updateTransportRouteAction( formData ) {
+    const profile = await getUser();
+    if (!profile) return { error: 'Not authenticated' };
+
     const supabase = await createServerSupabase();
 
     const {error} = await supabase
@@ -58,7 +62,8 @@ export async function updateTransportRouteAction( formData ) {
         .update({
             name: formData.name, monthly_fee: formData.monthlyFee, vehicle_no: formData.vehicleNo
         })
-        .eq('id', formData.id);
+        .eq('id', formData.id)
+        .eq('school_id', profile.school_id);
     if (error) {
         return { error: error.message }
     }
@@ -66,21 +71,22 @@ export async function updateTransportRouteAction( formData ) {
     return { success: true }
 }
 
-export async function searchStudentAction(school_id, searchQuery) {
+export async function searchStudentAction(searchQuery) {
     try {
+        const profile = await getUser();
+        if (!profile) return { error: 'Not authenticated' };
+
         const supabase = await createServerSupabase();
-        
-        if (!supabase) {
-            return { error: 'Failed to initialize database connection' };
-        }
-        
+        const currentSession = await getCurrentSession();
+
         const query = (searchQuery).trim();
         const admNoQuery = parseInt(query, 10)
-        
+
         let supabaseQuery = supabase
             .from('students')
             .select('id, name, classes(name), sections(name), roll_no, adm_no, route_id')
-            .eq('school_id', school_id)
+            .eq('school_id', profile.school_id)
+            .eq('session_id', currentSession?.id)
 
         if (!isNaN(admNoQuery)) {
             supabaseQuery = supabaseQuery.eq('adm_no', admNoQuery);
@@ -104,119 +110,208 @@ export async function searchStudentAction(school_id, searchQuery) {
     }
 }
 
-export async function manageStudentTransportAction(formData) {
+async function getTransportFeeHeadId(supabase, schoolId) {
+    const { data } = await supabase
+        .from('fee_heads')
+        .select('id')
+        .eq('school_id', schoolId)
+        .eq('name', 'Transport Fee')
+        .maybeSingle();
+    return data?.id || null;
+}
+
+// The student's transport invoice items in the session. An item is "locked" once any money
+// was received against it (or against a late fee charged on it); locked months can't be removed.
+async function loadTransportItems(supabase, studentId, feeHeadId, sessionId) {
+    const { data: items, error } = await supabase
+        .from('invoice_items')
+        .select('id, invoice_id, pay_period, amount, amount_paid, invoices!inner(session_id), payment_items(id)')
+        .eq('student_id', studentId)
+        .eq('fee_head_id', feeHeadId)
+        .eq('invoices.session_id', sessionId);
+    if (error) return { error: error.message };
+    if (!items.length) return { items: [] };
+
+    const { data: lateFees, error: lateFeeErr } = await supabase
+        .from('invoice_items')
+        .select('id, invoice_id, late_fee_for_invoice_item_id, amount_paid, payment_items(id)')
+        .in('late_fee_for_invoice_item_id', items.map(i => i.id));
+    if (lateFeeErr) return { error: lateFeeErr.message };
+
+    const isPaid = (item) => Number(item.amount_paid) > 0 || item.payment_items?.length > 0;
+
+    return {
+        items: items.map(item => {
+            const itemLateFees = (lateFees || []).filter(lf => lf.late_fee_for_invoice_item_id === item.id);
+            return {
+                id: item.id,
+                invoice_id: item.invoice_id,
+                pay_period: item.pay_period,
+                amount: Number(item.amount),
+                locked: isPaid(item) || itemLateFees.some(isPaid),
+                lateFees: itemLateFees.map(lf => ({ id: lf.id, invoice_id: lf.invoice_id })),
+            };
+        })
+    };
+}
+
+export async function getStudentTransportAction(studentId) {
+    const profile = await getUser();
+    if (!profile) return { error: 'Not authenticated' };
+
     const supabase = await createServerSupabase();
+    const currentSession = await getCurrentSession();
 
-    const schoolId = formData.school_id;
-    const studentId = formData.student_id;
-    const currentSession = formData.current_session;
-    const selectedRoute = formData.selected_route;
-    const transFeeHeadId = formData.trans_fee_head_id;
-    const selectedPayPeriods = formData.pay_periods;
-    const existingPayPeriods = formData.existing_pay_periods;
+    const feeHeadId = await getTransportFeeHeadId(supabase, profile.school_id);
+    if (!feeHeadId) return { periods: [] };
 
-    if (formData.existing_route_id) {
-        const {data: transportPaidPeriods, error: transPaidErr} = await supabase
-            .from('payment_items')
-            .select('invoice_items!inner(pay_period)')
-            .eq('invoice_items.fee_head_id', transFeeHeadId);
-        if (transPaidErr) {
-            return { error: transPaidErr.message }
-        }
+    const { items, error } = await loadTransportItems(supabase, studentId, feeHeadId, currentSession.id);
+    if (error) return { error };
 
-        const paidTransportPeriods = Array.from(new Set(transportPaidPeriods.map(t => t.invoice_items?.pay_period))) || [];
+    // One entry per month; a month is locked if any of its (possibly duplicate) items is locked
+    const byPeriod = new Map();
+    for (const item of items) {
+        const existing = byPeriod.get(item.pay_period);
+        byPeriod.set(item.pay_period, {
+            pay_period: item.pay_period,
+            amount: item.amount,
+            locked: Boolean(existing?.locked || item.locked),
+        });
+    }
 
-        const toBeDeletedPayPeriods = existingPayPeriods.filter(e => !paidTransportPeriods.includes(e))
+    return { periods: [...byPeriod.values()], duplicates: items.length - byPeriod.size };
+}
 
-        const {error: invItemDeleteErr} = await supabase
-            .from('invoice_items')
-            .delete()
-            .eq('student_id', studentId)
-            .eq('fee_head_id', transFeeHeadId)
-            .in('pay_period', toBeDeletedPayPeriods);
-        if (invItemDeleteErr) {
-            console.log(invItemDeleteErr)
-            return { error: invItemDeleteErr.message}
-        }
+// Brings the student's transport months in line with `payPeriods` for the selected route:
+// unpaid months that are no longer wanted (and duplicate items) are deleted, kept unpaid months
+// get the route's current fee, and new months are added. Paid months are never touched.
+export async function updateStudentTransportAction({ studentId, routeId, payPeriods = [] }) {
+    const profile = await getUser();
+    if (!profile) return { error: 'Not authenticated' };
 
-        const {error: setRouteNullErr} = await supabase
-            .from('students')
-            .update({
-                route_id: null
-            })
-            .eq('id', studentId);
-        if (setRouteNullErr) {
-            return { error: setRouteNullErr.message }
+    const supabase = await createServerSupabase();
+    const currentSession = await getCurrentSession();
+
+    const { data: student } = await supabase
+        .from('students')
+        .select('id')
+        .eq('id', studentId)
+        .eq('school_id', profile.school_id)
+        .maybeSingle();
+    if (!student) return { error: 'Student not found.' };
+
+    let route = null;
+    if (routeId) {
+        const { data } = await supabase
+            .from('transport_routes')
+            .select('id, monthly_fee')
+            .eq('id', routeId)
+            .eq('school_id', profile.school_id)
+            .maybeSingle();
+        if (!data) return { error: 'Transport route not found.' };
+        route = data;
+    }
+
+    const feeHeadId = await getTransportFeeHeadId(supabase, profile.school_id);
+    if (!feeHeadId) return { error: 'Transport Fee head not found. Please add a transport route first.' };
+
+    const { items, error: loadErr } = await loadTransportItems(supabase, studentId, feeHeadId, currentSession.id);
+    if (loadErr) return { error: loadErr };
+
+    const wanted = new Set(route ? payPeriods : []);
+    const covered = new Set();
+    const toDelete = [];
+    const toUpdate = [];
+    const affectedInvoiceIds = new Set();
+
+    // Paid items first, so an unpaid duplicate of a paid month gets cleaned up
+    const ordered = [...items].sort((a, b) => Number(b.locked) - Number(a.locked));
+    for (const item of ordered) {
+        if (item.locked) {
+            covered.add(item.pay_period);
+        } else if (wanted.has(item.pay_period) && !covered.has(item.pay_period)) {
+            covered.add(item.pay_period);
+            if (item.amount !== Number(route.monthly_fee)) {
+                toUpdate.push(item);
+                affectedInvoiceIds.add(item.invoice_id);
+            }
+        } else {
+            toDelete.push(item);
+            affectedInvoiceIds.add(item.invoice_id);
+            item.lateFees.forEach(lf => affectedInvoiceIds.add(lf.invoice_id));
         }
     }
 
-    if (selectedRoute) {
-        const {error: routeIdUpdtErr} = await supabase
-            .from('students')
-            .update({
-                route_id: selectedRoute.id
-            })
-            .eq('id', studentId);
-        if (routeIdUpdtErr) {
-            return { error: routeIdUpdtErr.message }
-        }
-        
-        const {data: invoices, error: invErr} = await supabase
+    const toAdd = [...wanted].filter(p => !covered.has(p));
+    let missingPeriods = [];
+    let insertRows = [];
+
+    if (toAdd.length) {
+        const { data: invoices, error: invErr } = await supabase
             .from('invoices')
             .select('id, pay_period')
-            .eq('school_id', schoolId)
+            .eq('school_id', profile.school_id)
             .eq('student_id', studentId)
-            .eq('session_id', currentSession.id);
-    
-            if (invErr) {
-            return { error: invErr.message }
-        }
-    
+            .eq('session_id', currentSession.id)
+            .in('pay_period', toAdd);
+        if (invErr) return { error: invErr.message };
+
         const invoiceIdMap = new Map(invoices.map(inv => [inv.pay_period, inv.id]));
-    
-        const transportInvItemsPayloads = []
-    
-        for (const p of selectedPayPeriods) {
-            transportInvItemsPayloads.push({
-                student_id: studentId,
-                fee_head_id: transFeeHeadId,
-                amount: selectedRoute.monthly_fee,
-                period_key: p,
-                pay_period: p,
-            })
-        }
-    
-        const finalTransInvItemsPayloads = transportInvItemsPayloads.map(item => {
-            const invoiceId = invoiceIdMap.get(item.pay_period);
-            return {
-                ...item,
-                invoice_id: invoiceId
-            }
-        })
-    
-        const {error: transInvItemInsertErr} = await supabase
-            .from('invoice_items')
-            .insert(finalTransInvItemsPayloads);
-    
-        if (transInvItemInsertErr) {
-            console.error(transInvItemInsertErr.message)
-            if (transInvItemInsertErr.code === '23505') {
-                return { error: { message: 'Cannot create duplicate transport invoices for a single month.', code: '23505'}}
-            } else {
-                return { error: transInvItemInsertErr.message }
-            }
-        }
-    
-        // Recompute total amounts for affected invoices
-        const uniqueInvoiceIds = invoices.map(i => i.id);
-    
-        const { error } = await supabase
-            .rpc('recalculate_and_update_totals_for_invoices', { p_invoice_ids: uniqueInvoiceIds });
-    
-        if (error) {
-            return { error: 'Error updating invoice totals: ' + error.message };
-        }
+        missingPeriods = toAdd.filter(p => !invoiceIdMap.has(p));
+        insertRows = toAdd.filter(p => invoiceIdMap.has(p)).map(p => ({
+            invoice_id: invoiceIdMap.get(p),
+            student_id: studentId,
+            fee_head_id: feeHeadId,
+            amount: route.monthly_fee,
+            period_key: p,
+            pay_period: p,
+        }));
+        insertRows.forEach(r => affectedInvoiceIds.add(r.invoice_id));
     }
 
-    return { success: true }
+    if (toDelete.length) {
+        // Late fees charged on a removed month go with it
+        const lateFeeIds = toDelete.flatMap(item => item.lateFees.map(lf => lf.id));
+        if (lateFeeIds.length) {
+            const { error } = await supabase.from('invoice_items').delete().in('id', lateFeeIds);
+            if (error) return { error: 'Error removing late fees: ' + error.message };
+        }
+        const { error } = await supabase.from('invoice_items').delete().in('id', toDelete.map(i => i.id));
+        if (error) return { error: 'Error removing transport months: ' + error.message };
+    }
+
+    if (toUpdate.length) {
+        const results = await Promise.all(toUpdate.map(item =>
+            supabase.from('invoice_items').update({ amount: route.monthly_fee }).eq('id', item.id)
+        ));
+        const failed = results.find(r => r.error);
+        if (failed) return { error: 'Error updating transport fee: ' + failed.error.message };
+    }
+
+    if (insertRows.length) {
+        const { error } = await supabase.from('invoice_items').insert(insertRows);
+        if (error) return { error: 'Error adding transport months: ' + error.message };
+    }
+
+    if (affectedInvoiceIds.size) {
+        const { error } = await supabase
+            .rpc('recalculate_and_update_totals_for_invoices', { p_invoice_ids: [...affectedInvoiceIds] });
+        if (error) return { error: 'Error updating invoice totals: ' + error.message };
+    }
+
+    const { error: routeErr } = await supabase
+        .from('students')
+        .update({ route_id: route?.id || null })
+        .eq('id', studentId);
+    if (routeErr) return { error: routeErr.message };
+
+    const keptPaid = items.filter(i => i.locked && !wanted.has(i.pay_period)).map(i => i.pay_period);
+
+    return {
+        success: true,
+        added: insertRows.length,
+        removed: toDelete.length,
+        keptPaid: [...new Set(keptPaid)],
+        missingPeriods,
+    };
 }

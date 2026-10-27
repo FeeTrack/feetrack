@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import NextTopLoader from "nextjs-toploader";
 
 export const metadata = {
   title: "FeeTrack - Fee Management App for Schools, Coaching Centres and Colleges",
@@ -10,6 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
+        <NextTopLoader color="#5a4bda" height={4} showSpinner={false} shadow="0 0 10px #5a4bda,0 0 5px #5a4bda" />
         <Toaster
           position="top-right"
           toastOptions={{

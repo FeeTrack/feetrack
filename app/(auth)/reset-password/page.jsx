@@ -17,21 +17,20 @@ export default function ResetPasswordPage() {
 
         try {
             setLoading(true)
+            setError(null)
+            setSuccessMessage(null)
 
             const res = await resetPasswordAction(email)
 
             if (res?.error) {
-                if (res.error.message) {
-                    setError(res.error.message)
-                } else {
-                    console.error(res.error)
-                    setError('Failed to send link. Please try again.')
-                }
+                setError(typeof res.error === 'string' ? res.error : 'Failed to send link. Please try again.')
+                return
             }
 
-            setSuccessMessage('If the email is valid, a reset link is sent on it.')
+            setSuccessMessage(`If an account exists for ${email}, a password reset link has been sent to it. Please check your inbox and spam folder.`)
         } catch (error) {
             console.error(error)
+            setError('Failed to send link. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -67,12 +66,12 @@ export default function ResetPasswordPage() {
                         )}
 
                         {successMessage && (
-                            <div className="text-black text-sm text-center">
+                            <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-emerald-900 text-sm text-center">
                                 {successMessage}
                             </div>
                         )}
 
-                        <button type="submit" className="primary-btn w-full rounded-full py-2">
+                        <button type="submit" disabled={loading} className="primary-btn w-full rounded-full py-2 disabled:opacity-70">
                             {loading ? (
                                 <span className="flex justify-center items-center gap-2">
                                     <Spinner size={12} bgColor='white' />

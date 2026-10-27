@@ -55,18 +55,19 @@ export default function CollectFeesClient() {
     const [totalPaid, setTotalPaid] = useState(null);
     const [totalDiscount, setTotalDiscount] = useState(null);
 
-    useEffect(() => {
-        if (!selectedStudent) return;
-        const fetchInvoicePeriodsItems = async () => {
-            setLoading(true);
-            const res = await fetch(`/api/fees/collect/invoices?student_id=${selectedStudent?.id}&session_id=${currentSession?.id}`, {
+    // Fetches fresh fee details on every click, so re-clicking the same student (after closing
+    // the form, after a payment, or after an error) always reloads and reopens it
+    const openCollectFee = async (student) => {
+        setOpen(false);
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/fees/collect/invoices?student_id=${student.id}&session_id=${currentSession?.id}`, {
                 method: 'GET'
             });
 
             if (!res.ok) {
                 const errorData = await res.json();
                 toast.error((errorData?.error || res.statusText));
-                setLoading(false);
                 return;
             }
 
@@ -110,10 +111,15 @@ export default function CollectFeesClient() {
 
             setPayPeriods(periods);
             setInvoiceItems(invoiceItems);
+            setSelectedStudent(student);
+            setOpen(true);
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load fee details.');
+        } finally {
             setLoading(false);
         }
-        fetchInvoicePeriodsItems();
-    }, [selectedStudent])
+    }
 
   return (
     <div className='space-y-6'>
@@ -171,7 +177,8 @@ export default function CollectFeesClient() {
                     <div>
                         <button
                             className="primary-btn md:mr-2"
-                            onClick={() => { setSelectedStudent(s); setOpen(true); }}
+                            onClick={() => openCollectFee(s)}
+                            disabled={loading}
                         >
                             Collect Fee
                         </button>
@@ -187,9 +194,10 @@ export default function CollectFeesClient() {
             </div>
         )}
 
-        {selectedStudent && totalFeesAmount && (
-            <Modal open={open} onClose={() => setOpen(false)} title="Collect Fees">
-                <CollectFeesForm 
+        {selectedStudent && totalFeesAmount !== null && (
+            <Modal open={open} onClose={handleCancel} title="Collect Fees">
+                <CollectFeesForm
+                    key={selectedStudent.id + '-' + open}
                     student={selectedStudent}
                     onCancel={handleCancel}
                     payPeriods={payPeriods}

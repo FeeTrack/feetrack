@@ -17,15 +17,15 @@ export default async function StaffPage() {
     if (!profile) {
         redirect('/login')
     }
-    if (profile.role !== 'admin') {
-        return (
-            <UserLayout pageName='Staff'>
-            <div className="w-full h-full flex justify-center items-center">
-                <h1>Unauthorized Access.</h1>
-            </div>
-            </UserLayout>
-        )
-    }
+    // if (profile.role !== 'admin') {
+    //     return (
+    //         <UserLayout pageName='Staff'>
+    //         <div className="w-full h-full flex justify-center items-center">
+    //             <h1>Unauthorized Access.</h1>
+    //         </div>
+    //         </UserLayout>
+    //     )
+    // }
     
     const accessCheck = await checkFeatureAccess(profile.school_id, 'staffModule')
     if (!accessCheck.allowed) {
@@ -40,7 +40,7 @@ export default async function StaffPage() {
 
     const {data: staff }  = await supabase
         .from('staff')
-        .select('id, name, designation, mobile_no, salary')
+        .select('id, name, designation, gender, mobile_no, salary, joining_date')
         .eq('school_id', profile.school_id)
         .order('created_at', { ascending: false});
         

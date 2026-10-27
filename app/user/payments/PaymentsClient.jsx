@@ -1,6 +1,7 @@
 // PaymentsClient.jsx
 'use client';
-import { useState, useEffect, useActionState } from "react";
+import DateInput from '@/components/DateInput';
+import { useState, useEffect, useRef, useActionState } from "react";
 import toast from "react-hot-toast";
 import ExcelJS from 'exceljs';
 import { months } from "@/utils/constants/backend";
@@ -15,12 +16,13 @@ import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, Edit, Trash2, Plus, Filter, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Search, Download, Edit, Trash2, Plus, Filter, ArrowLeft, ArrowRight, Printer } from 'lucide-react';
+import { downloadReceipt, openReceiptWindow } from "@/utils/receipt/buildReceipt";
 
 import { useSession } from '@/Context/SessionContext';
 import Link from "next/link";
 
-export default function PaymentsClient({ profile, recentPayments }) {
+export default function PaymentsClient({ profile, recentPayments, classes = [], sections = [] }) {
     const [payments, setPayments] = useState(recentPayments || []);
     const [showEdit, setShowEdit] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
@@ -47,16 +49,43 @@ export default function PaymentsClient({ profile, recentPayments }) {
     const [hasFilteredPayments, setHasFilteredPayments] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [filterFormData, setFilterFormData] = useState({
-        from_date: '',
-        to_date: ''
-    });
+    const emptyFilters = { from_date: '', to_date: '', class: '', section: '', receipt_no: '' };
+    const [filterFormData, setFilterFormData] = useState(emptyFilters);
 
     const handleFilterChange = (e) => {
-        setFilterFormData({
-            ...filterFormData,
-            [e.target.name]: e.target.value
-        })
+        const { name, value } = e.target;
+        setFilterFormData(prev => ({
+            ...prev,
+            [name]: value,
+            ...(name === 'class' ? { section: '' } : {}),
+        }))
+    }
+
+    const filterSections = sections.filter(s => s.class_id === filterFormData.class);
+    const hasAnyFilter = Boolean(filterFormData.from_date || filterFormData.to_date || filterFormData.class || filterFormData.receipt_no.trim());
+
+    const [printingId, setPrintingId] = useState(null);
+
+    const handleReprint = async (payment) => {
+        // Opened during the click so the browser doesn't block it
+        const receiptWindow = openReceiptWindow();
+        setPrintingId(payment.id);
+        try {
+            const res = await fetch(`/api/fees/collect/receipt-details?payment_id=${payment.id}`);
+            const payload = await res.json();
+            if (!res.ok || payload?.error) {
+                receiptWindow?.close();
+                toast.error('Failed to load receipt: ' + (payload?.error || res.statusText));
+                return;
+            }
+            await downloadReceipt(payload, receiptWindow);
+        } catch (error) {
+            receiptWindow?.close();
+            console.error('Reprint error:', error);
+            toast.error('Failed to print receipt.');
+        } finally {
+            setPrintingId(null);
+        }
     }
 
     const [pageNo, setPageNo] = useState(1);
@@ -98,13 +127,19 @@ export default function PaymentsClient({ profile, recentPayments }) {
     }, [state]);
 
     const clearFilters = () => {
-        setFilterFormData({
-        from_date: '',
-        to_date: '',
-        });
+        setFilterFormData(emptyFilters);
         setHasFilteredPayments(false);
         setPayments(recentPayments);
     }
+
+    // Filter results belong to the old session; the refreshed recent payments replace them
+    const sessionIdRef = useRef(currentSession?.id);
+    useEffect(() => {
+        if (sessionIdRef.current === currentSession?.id) return;
+        sessionIdRef.current = currentSession?.id;
+        clearFilters();
+        setPageNo(1);
+    }, [currentSession?.id]);
 
     useEffect(() => {
         if (hasFilteredPayments) return;
@@ -310,28 +345,42 @@ export default function PaymentsClient({ profile, recentPayments }) {
                         <Plus className="w-4 h-4" />
                         Add Payment                            
                     </Link>
-
-                    {profile.role === 'admin' && (
-                        <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
-                            <Filter className="w-4 h-4" />
-                            Filter Payments
-                        </button>
-                    )}
                 </div>
 
-                <div className={`w-full overflow-hidden ${showFilter ? 'max-h-60 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
-                    <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
+                <div className={`w-full overflow-hidden ${showFilter ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
+                    <form action={filterAction} className="flex items-end gap-4 flex-wrap" id="filterForm">
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="receipt_no" className="font-semibold">Receipt No.</label>
+                            <input type="text" id="receipt_no" name="receipt_no" placeholder="e.g. 15 or 2026/15" className="border rounded px-2 py-1 w-40 hover:border hover:border-secondary" value={filterFormData.receipt_no} onChange={handleFilterChange} />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="class" className="font-semibold">Class</label>
+                            <select id="class" name="class" className="border rounded px-2 py-1 hover:border hover:border-secondary" value={filterFormData.class} onChange={handleFilterChange}>
+                                <option value="">All Classes</option>
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="section" className="font-semibold">Section</label>
+                            <select id="section" name="section" className="border rounded px-2 py-1 hover:border hover:border-secondary disabled:text-gray-400" value={filterFormData.section} onChange={handleFilterChange} disabled={!filterFormData.class}>
+                                <option value="">All Sections</option>
+                                {filterSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+
                         <div className="flex flex-col gap-2">
                             <label htmlFor="from_date" className="font-semibold">From</label>
-                            <input type="date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} />
+                            <DateInput id="from_date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} min={currentSession?.start_date} max={currentSession?.end_date} />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label htmlFor="to_date" className="font-semibold">To</label>
-                            <input type="date" name="to_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.to_date} onChange={handleFilterChange} min={filterFormData.from_date} max={currentSession?.end_date} />
+                            <DateInput id="to_date" name="to_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.to_date} onChange={handleFilterChange} min={filterFormData.from_date || currentSession?.start_date} max={currentSession?.end_date} />
                         </div>
 
-                        <button type="submit" className="primary-btn ml-2" form="filterForm" disabled={!filterFormData.from_date || !filterFormData.to_date}>Filter</button>
+                        <button type="submit" className="primary-btn ml-2" form="filterForm" disabled={!hasAnyFilter}>Filter</button>
                         
                         {state?.filteredPaymentsResponse && <button type="button" className="primary-btn" onClick={clearFilters} disabled={pending}>Clear</button>}
 
@@ -406,6 +455,14 @@ export default function PaymentsClient({ profile, recentPayments }) {
                                                 <TableCell>{new Date(p.created_at).toLocaleDateString('en-IN').split('T')[0]}</TableCell>
                                                 <TableCell className='text-right'>
                                                     <div className="flex justify-end gap-2">
+                                                        <button
+                                                            className="p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-wait"
+                                                            title="Print receipt"
+                                                            disabled={printingId === p.id}
+                                                            onClick={() => handleReprint(p)}
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </button>
                                                         <button className="p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200" onClick={() => {setEditPayment(p); setShowEdit(true);}}>
                                                             <Edit className="h-4 w-4" />
                                                         </button>

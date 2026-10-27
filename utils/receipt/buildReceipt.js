@@ -1,5 +1,7 @@
 // utils/receipt/buildReceipt.js
 // Optimized space-efficient receipt builder
+import { months } from '@/utils/constants/backend';
+
 export function numberToWords(num) {
   if (num === 0) return 'Zero';
   
@@ -30,7 +32,105 @@ export function numberToWords(num) {
   return convertLessThanThousand(num);
 }
 
-// Build optimized receipt HTML
+// Everything interpolated into the receipt is escaped: names, descriptions etc. are user input
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// 2,500 or 2,500.50 (never 2,500.5)
+const money = (n) => {
+  const value = Number(n || 0);
+  const digits = Number.isInteger(value) ? 0 : 2;
+  return value.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: 2 });
+};
+
+const formatMethod = (method) => {
+  if (!method) return '';
+  if (['upi', 'neft', 'rtgs', 'imps'].includes(method.toLowerCase())) return method.toUpperCase();
+  return method.charAt(0).toUpperCase() + method.slice(1);
+};
+
+function amountInWords(amount) {
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+  let words = numberToWords(rupees) + ' Rupees';
+  if (paise > 0) words += ' and ' + numberToWords(paise) + ' Paise';
+  return words + ' Only';
+}
+
+const MONTH_ORDER = months.map(m => m.name); // Apr ... Mar, session order
+const monthOf = (period) => /^([A-Z][a-z]{2})-\d{4}$/.exec(period || '')?.[1] || null;
+
+const formatDay = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const nextDay = (iso) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// "15 Apr 2026 – 14 Jul 2026" for back-to-back admission-date periods, split where there's a gap
+function describeDateRanges(items) {
+  const sorted = [...items].sort((a, b) => a.period_start.localeCompare(b.period_start));
+  const blocks = [];
+  for (const item of sorted) {
+    const last = blocks[blocks.length - 1];
+    if (last && nextDay(last.end) === item.period_start) {
+      last.end = item.period_end;
+    } else {
+      blocks.push({ start: item.period_start, end: item.period_end });
+    }
+  }
+  return blocks.map(b => `${formatDay(b.start)} – ${formatDay(b.end)}`).join(', ');
+}
+
+// "Apr–Jun, Aug" for monthly periods; anything else (yearly etc.) is listed as is
+function describeMonths(items) {
+  const monthIdx = [...new Set(items.map(i => MONTH_ORDER.indexOf(monthOf(i.pay_period))))].sort((a, b) => a - b);
+  const runs = [];
+  for (const idx of monthIdx) {
+    const last = runs[runs.length - 1];
+    if (last && idx === last.end + 1) last.end = idx;
+    else runs.push({ start: idx, end: idx });
+  }
+  return runs.map(r => r.start === r.end ? MONTH_ORDER[r.start] : `${MONTH_ORDER[r.start]}–${MONTH_ORDER[r.end]}`).join(', ');
+}
+
+function describePeriods(items) {
+  const dated = items.filter(i => i.period_start && i.period_end && !i.is_late_fee);
+  const monthly = items.filter(i => !dated.includes(i) && monthOf(i.pay_period));
+  const other = items.filter(i => !dated.includes(i) && !monthly.includes(i));
+
+  return [
+    dated.length ? describeDateRanges(dated) : '',
+    monthly.length ? describeMonths(monthly) : '',
+    [...new Set(other.map(i => i.period_key || i.pay_period).filter(Boolean))].join(', '),
+  ].filter(Boolean).join(', ');
+}
+
+// One row per fee head (all late fees together), with the periods it covers
+function groupReceiptItems(items) {
+  const sortKey = (i) => MONTH_ORDER.indexOf(monthOf(i.pay_period));
+  const groups = new Map();
+
+  for (const item of [...items].sort((a, b) => sortKey(a) - sortKey(b))) {
+    const key = item.is_late_fee ? '__late_fee__' : item.fee_head_name;
+    if (!groups.has(key)) {
+      groups.set(key, { name: item.is_late_fee ? 'Late Fee' : item.fee_head_name, items: [], amount: 0, prev_paid: 0, discount: 0, paid: 0 });
+    }
+    const g = groups.get(key);
+    g.items.push(item);
+    g.amount += Number(item.amount || 0);
+    g.prev_paid += Number(item.prev_paid || 0);
+    g.discount += Number(item.discount || 0);
+    g.paid += Number(item.amount_paid || 0);
+  }
+
+  return [...groups.values()].map(g => ({
+    ...g,
+    periods: describePeriods(g.items),
+    balance: Math.max(g.amount - g.prev_paid - g.discount - g.paid, 0),
+  }));
+}
+
+// Build receipt HTML: two copies (Parent / Office) on one A4 sheet
 export function buildReceiptHtml(paymentData) {
   const {
     school,
@@ -38,247 +138,215 @@ export function buildReceiptHtml(paymentData) {
     student,
     items = []
   } = paymentData;
-  
-  // Calculate amounts
-  const totalAmount = items.reduce((sum, item) => sum + Number(item.amount), 0);
-  const totalDiscount = items.reduce((sum, item) => sum + Number(item.discount || 0), 0);
-  const totalPaid = items.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0);
-  
-  // Build items rows
-  const itemsHtml = items.map((item, index) => 
-    `<tr>
-        <td>${index + 1}</td>
-        <td>${item.is_late_fee ? `Late Fee - ${item.fee_head_name}` : `${item.fee_head_name}`}
-          <span class='period_start_end'>${(item.period_start && !item.is_late_fee) ? `(${item.period_start} - ${item.period_end})` : ''}</span>
-        </td>
-        <td>${item.period_key || '-'}</td>
-        <td>${item.amount}</td>
-        <td>${item.discount}</td>
-        <td>${item.amount_paid}</td>
-      </tr>
-    `).join('');
-  
-  const amountInWords = numberToWords(Math.floor(totalPaid)) + ' Rupees Only';
-  
+
+  const rows = groupReceiptItems(items);
+  const totals = rows.reduce((acc, r) => ({
+    amount: acc.amount + r.amount,
+    prev_paid: acc.prev_paid + r.prev_paid,
+    discount: acc.discount + r.discount,
+    paid: acc.paid + r.paid,
+    balance: acc.balance + r.balance,
+  }), { amount: 0, prev_paid: 0, discount: 0, paid: 0, balance: 0 });
+
+  const rowsHtml = rows.map((r, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td class="particulars">${esc(r.name)}${r.periods ? ` <span class="periods">(${esc(r.periods)})</span>` : ''}</td>
+          <td>${money(r.amount)}</td>
+          <td>${money(r.prev_paid)}</td>
+          <td>${money(r.discount)}</td>
+          <td class="strong">${money(r.paid)}</td>
+          <td>${money(r.balance)}</td>
+        </tr>`).join('');
+
+  const receiptDate = new Date(payment.created_at).toLocaleDateString('en-IN');
+  const classText = `${student.class_name ?? ''}${student.section_name ? `-${student.section_name}` : ''}${student.roll_no ? ` (Roll No: ${student.roll_no})` : ''}`;
+  const method = formatMethod(payment.method);
+  const generatedOn = `${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+
+  const renderCopy = (copyLabel) => `
+  <div class="receipt-copy">
+    <div class="receipt-header">
+      <div class="school-logo">${school.logo ? esc(school.logo) : '🏫'}</div>
+      <div class="school-info">
+        <div class="school-name">${esc(school.name)}</div>
+        ${school.address ? `<div class="school-details">${esc(school.address)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="receipt-title-section">
+      <span class="receipt-title">FEE RECEIPT</span>
+      <span class="copy-label">${copyLabel}</span>
+    </div>
+
+    <div class="info-section">
+      <div class="info-row"><span class="info-label">Receipt No:</span><span class="info-value strong">${esc(payment.receipt_no)}</span></div>
+      <div class="info-row"><span class="info-label">Date:</span><span class="info-value">${esc(receiptDate)}</span></div>
+      <div class="info-row"><span class="info-label">Name:</span><span class="info-value strong">${esc(student.name)}</span></div>
+      <div class="info-row"><span class="info-label">Admission No:</span><span class="info-value">${esc(student.adm_no)}</span></div>
+      <div class="info-row"><span class="info-label">Father's Name:</span><span class="info-value">${esc(student.father_name || '-')}</span></div>
+      <div class="info-row"><span class="info-label">Class:</span><span class="info-value">${esc(classText)}</span></div>
+      <div class="info-row"><span class="info-label">Mother's Name:</span><span class="info-value">${esc(student.mother_name || '-')}</span></div>
+      <div class="info-row"><span class="info-label">Mobile No:</span><span class="info-value">${esc(student.mobile_no || '-')}</span></div>
+    </div>
+
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th style="width: 28px;">Sr.</th>
+          <th>Particulars</th>
+          <th style="width: 62px;">Amount</th>
+          <th style="width: 62px;">Prev. Paid</th>
+          <th style="width: 58px;">Discount</th>
+          <th style="width: 62px;">Paid</th>
+          <th style="width: 62px;">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr class="totals-row">
+          <td colspan="2">Total</td>
+          <td>${money(totals.amount)}</td>
+          <td>${money(totals.prev_paid)}</td>
+          <td>${money(totals.discount)}</td>
+          <td>₹${money(totals.paid)}</td>
+          <td>${money(totals.balance)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="table-footer">
+      <div class="footer-line">
+        <span class="label">Received:</span> ${esc(amountInWords(totals.paid))}
+      </div>
+      <div class="footer-line split">
+        <div class="payment-info-row">
+          ${method ? `<span><span class="label">Mode:</span> ${esc(method)}</span>` : ''}
+          ${payment.transaction_id ? `<span><span class="label">Txn ID:</span> ${esc(payment.transaction_id)}</span>` : ''}
+          ${payment.discount_description ? `<span><span class="label">Discount:</span> ${esc(payment.discount_description)}</span>` : ''}
+        </div>
+        <div class="signature">(Accounts)</div>
+      </div>
+    </div>
+
+    <div class="receipt-footer">
+      ${totals.prev_paid > 0 ? 'Prev. Paid includes earlier payments and discounts on these fees. ' : ''}Computer-generated receipt · Generated on ${esc(generatedOn)} · Powered by <strong>FeeTrack</strong>
+    </div>
+  </div>`;
+
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fee Receipt - ${payment.receipt_no}</title>
+  <title>Fee Receipt - ${esc(payment.receipt_no)}</title>
   <style>
     @media print {
-        * {
-            -webkit-print-color-adjust: exact !important; /* Chrome, Edge */
-            color-adjust: exact !important;               /* Firefox */
-            print-color-adjust: exact !important;         /* New standard */
-        }
-        @page { 
-            size: A4;
-            margin: 0;
-        }
-        body { 
-            margin: 0; 
-            padding: 16px; 
-        }
-        .no-print { display: none; }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      @page { size: A4; margin: 10mm; }
+      body { margin: 0; padding: 0; }
+      .no-print { display: none; }
     }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: 'Arial', sans-serif;
       background: #fff;
       color: #000;
     }
-    
-    .receipt-container {
-      max-width: 210mm;
-      margin: 0 auto;
-      background: white;
+
+    .receipt-container { max-width: 190mm; margin: 0 auto; }
+
+    /* Each copy stays whole; if both don't fit, the office copy moves to the next page */
+    .receipt-copy { break-inside: avoid; page-break-inside: avoid; }
+
+    .cut-line {
+      margin: 14px 0;
+      border-top: 1px dashed #666;
+      text-align: center;
+      line-height: 0;
     }
-    
+    .cut-line span { background: #fff; padding: 0 8px; font-size: 11px; color: #666; }
+
     .receipt-header {
       display: flex;
       justify-content: center;
-      gap: 16px;
-      padding: 8px;
-      margin-bottom: 8px;
+      align-items: center;
+      gap: 12px;
+      padding: 6px;
       background: #f0f0f0;
     }
-    
     .school-logo {
-      width: 60px;
-      height: 60px;
-      border: 2px solid #000;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      flex-shrink: 0;
+      width: 44px; height: 44px;
+      border: 2px solid #000; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
     }
-    
-    .school-info {
-      max-width: fit-content;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 2px;
-    }
-    
-    .school-name {
-      font-size: 24px;
-      font-weight: bold;
-      text-transform: capitalize;
-    }
-    
-    .school-tagline {
-      font-size: 12px;
-      font-style: italic;
-      color: #333;
-    }
-    
-    .school-details {
-      font-size: 12px;
-      font-weight: 500;
-      text-align: center;
-      color: #000;
-    }
-    
+    .school-info { text-align: center; }
+    .school-name { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+    .school-details { font-size: 11px; font-weight: 500; }
+
     .receipt-title-section {
+      position: relative;
       text-align: center;
-      margin-bottom: 12px;
+      margin: 6px 0 8px;
     }
-    
-    .receipt-title {
-      font-size: 14px;
-      font-weight: bold;
-      text-decoration: underline;
+    .receipt-title { font-size: 13px; font-weight: bold; text-decoration: underline; }
+    .copy-label {
+      position: absolute; right: 0; top: 0;
+      font-size: 10px; font-weight: bold; letter-spacing: 1px;
+      border: 1px solid #000; padding: 1px 6px;
     }
-    
+
     .info-section {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px 30px;
-      margin-bottom: 12px;
-      font-size: 12px;
-    }
-    
-    .info-row {
-      display: flex;
-      gap: 12px;
-    }
-    
-    .info-label {
-      font-weight: bold;
-      width: 100px;
-      max-width: 150px;
-    }
-    
-    .info-value {
-      flex: 1;
-    }
-    
-    .payment-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 0;
+      gap: 3px 24px;
+      margin-bottom: 8px;
       font-size: 11px;
     }
-    
+    .info-row { display: flex; gap: 8px; }
+    .info-label { font-weight: bold; width: 92px; flex-shrink: 0; }
+    .info-value { flex: 1; }
+    .strong { font-weight: bold; }
+
+    .payment-table { width: 100%; border-collapse: collapse; font-size: 11px; }
     .payment-table th {
       background: #f0f0f0;
       border: 1px solid #000;
-      padding: 6px 4px;
+      padding: 4px 3px;
       text-align: center;
       font-weight: bold;
     }
-    
-    .payment-table td {
-      border: 1px solid #000;
-      padding: 4px;
-      text-align: center;
-    }
-    
-    .payment-table td:nth-child(2) {
-      text-align: left;
-      padding-left: 8px;
-    }
+    .payment-table td { border: 1px solid #000; padding: 3px 4px; text-align: right; }
+    .payment-table td:first-child { text-align: center; }
+    .payment-table td.particulars { text-align: left; padding-left: 6px; }
+    .periods { font-size: 10px; color: #333; }
+    .totals-row td { font-weight: bold; background: #f0f0f0; }
+    .totals-row td:first-child { text-align: left; padding-left: 6px; }
 
-    .period_start_end {
-      font-style: italic;
-      font-size: 10px;
-    }
-
-    td.totalsTd {
-      text-align: center;
-    }
-    
     .table-footer {
       border: 1px solid #000;
+      border-top: none;
+      padding: 4px 8px;
       display: flex;
       flex-direction: column;
-      gap:10px;
-    }
-    
-    .amount-words-row {
-      padding: 2px 12px;
+      gap: 6px;
       font-size: 11px;
     }
-    
-    .amount-words-label {
-      font-weight: bold;
-      display: inline;
-    }
-    
-    .amount-words-text {
-      display: inline;
-      text-transform: capitalize;
-    }
-    
-    .payment-info-row {
-      font-size: 11px;
-      display: flex;
-      justify-content: flex-start;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-    
-    .payment-info-item {
-      display: flex;
-      gap: 4px;
-    }
-    
-    .payment-info-item strong {
-      font-weight: bold;
-    }
+    .footer-line .label { font-weight: bold; }
+    .footer-line.split { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+    .payment-info-row { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+    .signature { font-weight: bold; padding-top: 14px; white-space: nowrap; }
 
-    .final-section-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 2px 12px;
-      font-size: 11px;
-    }
-    
-    .receipt-footer {
-      margin-top: 8px;
-      text-align: center;
-      font-size: 10px;
-      color: #666;
-    }
-    
-    @media max-width: 600px {
-        .print-button { display: none; }
-    }
+    .receipt-footer { margin-top: 4px; text-align: center; font-size: 9px; color: #666; }
+
     .print-button {
       position: fixed;
       top: 30px;
@@ -293,142 +361,17 @@ export function buildReceiptHtml(paymentData) {
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       transition: all 0.3s;
     }
-    
-    .print-button:hover {
-      transform: translateY(-2px);
-    }
+    .print-button:hover { transform: translateY(-2px); }
+    @media (max-width: 600px) { .print-button { display: none; } }
   </style>
 </head>
 <body>
   <div class="receipt-container">
-    <!-- Header -->
-    <div class="receipt-header">
-      <div class="school-logo">${school.logo || '🏫'}</div>
-      <div class="school-info">
-        <div class="school-name">${school.name}</div>
-        <div class="school-tagline">${school.tagline || ''}</div>
-        <div class="school-details">
-          ${school.address || ''}
-        </div>
-      </div>
-    </div>
-    
-    <!-- Receipt Title -->
-    <div class="receipt-title-section">
-      <div class="receipt-title">FEE RECEIPT</div>
-    </div>
-    
-    <!-- Receipt Meta & Student Info -->
-    <div class="info-section">
-      <!-- Receipt Meta -->
-      <div class="info-row">
-        <span class="info-label">Receipt No:</span>
-        <span class="info-value">${payment.receipt_no}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Date:</span>
-        <span class="info-value">${new Date(payment.created_at).toLocaleDateString('en-IN')}</span>
-      </div>
-            
-      <!-- Student Info -->
-      <div class="info-row">
-        <span class="info-label">Name:</span>
-        <span class="info-value">${student.name}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Admission No:</span>
-        <span class="info-value">${student.adm_no}</span>
-      </div>
-      
-      <div class="info-row">
-        <span class="info-label">Father's Name:</span>
-        <span class="info-value">${student.father_name || '-'}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Class:</span>
-        <span class="info-value">${student.class_name}${student.section_name ? `-${student.section_name}` : ''}${student.roll_no ? ` (Roll No: ${student.roll_no})` : ''}</span>
-      </div>
-
-      <div class="info-row">
-        <span class="info-label">Mother's Name:</span>
-        <span class="info-value">${student.mother_name || '-'}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Mobile No:</span>
-        <span class="info-value">${student.mobile_no || '-'}</span>
-      </div>
-
-    </div>
-    
-    <!-- Payment Table -->
-    <table class="payment-table">
-      <thead>
-        <tr>
-          <th style="width: 40px;">Sr.</th>
-          <th style="width: auto;">Fee Description</th>
-          <th style="width: 80px;">Period</th>
-          <th style="width: 60px;">Amount</th>
-          <th style="width: 60px;">Discount</th>
-          <th style="width: 60px;">Paid</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemsHtml}
-        <tr style="font-weight: 600; background: #f0f0f0;">
-          <td colspan="2" style="border-right: none; border-bottom:none;">Totals</td>
-          <td class="totalsTd" style="border:none;"></td>
-          <td class="totalsTd" style="border:none;">${(totalAmount)}</td>
-          <td class="totalsTd" style="border:none;">${totalDiscount > 0 ? (totalDiscount) : '0'}</td>
-          <td class="totalsTd" style="border-left:none; border-bottom:none;">${(totalPaid)}</td>
-        </tr>
-      </tbody>
-    </table>
-    
-    <!-- Table Footer -->
-    <div class="table-footer">
-
-      <!-- Amount in Words -->
-      <div class="amount-words-row">
-        <span class="amount-words-label">Received: </span>
-        <span class="amount-words-text">${amountInWords}</span>
-      </div>
-      
-      <!-- Payment Info -->
-
-      <div class="final-section-line">
-        <div class="payment-info-row">
-          ${payment.method ? `
-          <div class="payment-info-item">
-            <strong>Payment Method:</strong>
-            <span>${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}</span>
-          </div>
-          ` : ''}
-          ${payment.discount_description ? `
-          <div class="payment-info-item">
-            <strong>Discount Description:</strong>
-            <span>${payment.discount_description}</span>
-          </div>
-          ` : ''}
-        </div>
-        
-        <div><strong>(Accounts)</strong></div>
-      </div>
-
-    </div>
-    
-    <!-- Footer -->
-    <div class="receipt-footer">
-      <p>
-        <strong>Note:</strong> This is a computer-generated receipt. 
-        Generated on: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-      </p>
-      <p>
-          Powered by <strong><a href="https://krishnaupadhyay.vercel.app" target="_blank" style="color: #364153; text-decoration: none;">FeeTrack</a></strong>
-      </p>
-    </div>
+    ${renderCopy('PARENT COPY')}
+    <div class="cut-line"><span>✂ cut here</span></div>
+    ${renderCopy('OFFICE COPY')}
   </div>
-  
-  <!-- Print Button -->
+
   <button class="print-button no-print" onclick="window.print()">
     🖨️ Print Receipt
   </button>
@@ -437,31 +380,44 @@ export function buildReceiptHtml(paymentData) {
   `;
 }
 
+
+const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// Call this synchronously in the click handler, before any await. Browsers only allow
+// window.open during a user click; opening it after a network request gets it blocked,
+// which forces the much slower html2canvas PDF fallback. Returns null on mobile.
+export function openReceiptWindow() {
+  if (isMobileDevice()) return null;
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write('<p style="font-family:sans-serif;padding:24px;color:#555">Preparing receipt…</p>');
+  }
+  return win;
+}
+
 // BEST SOLUTION: Works perfectly on both Desktop & Mobile
-export async function downloadReceipt(paymentData) {
-  // Check if mobile
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
-  if (isMobile) {
+export async function downloadReceipt(paymentData, printWindow = null) {
+  if (isMobileDevice()) {
     // Mobile: Use jsPDF for direct download
     return await generatePdfDirectly(paymentData);
   } else {
     // Desktop: Use native print (better quality)
-    return openPrintDialog(paymentData);
+    return openPrintDialog(paymentData, printWindow);
   }
 }
 
 // For Desktop: Native print dialog
-function openPrintDialog(paymentData) {
+function openPrintDialog(paymentData, existingWindow) {
   const html = buildReceiptHtml(paymentData);
   const fileName = `${paymentData.payment.receipt_no}_${paymentData.student.name}`;
-  
-  const printWindow = window.open('', '_blank');
-  
+
+  const printWindow = existingWindow && !existingWindow.closed ? existingWindow : window.open('', '_blank');
+
   if (!printWindow) {
     // Fallback to direct PDF if popup blocked
     return generatePdfDirectly(paymentData);
   }
+  printWindow.document.open();
   // Inject HTML with enhanced print styles
   const enhancedHtml = html.replace(
     '<style>',
@@ -532,11 +488,13 @@ async function generatePdfDirectly(paymentData) {
     // Calculate dimensions
     const pdfWidth = 210; // A4 width in mm
     const pdfHeight = 297; // A4 height in mm
-    const imgWidth = pdfWidth;
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-    
-    // If content is longer than one page, it will overflow (you can add multi-page logic if needed)
-    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+    // Scale down (never crop) when the receipt is taller than one page
+    const fullHeight = (canvas.height * pdfWidth) / canvas.width;
+    const scale = Math.min(1, pdfHeight / fullHeight);
+    const imgWidth = pdfWidth * scale;
+    const imgHeight = fullHeight * scale;
+
+    pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, 0, imgWidth, imgHeight);
     
     // Save the PDF
     pdf.save(fileName);
@@ -592,10 +550,14 @@ export async function previewAndDownloadReceipt(paymentData) {
     });
     
     const pdfWidth = 210;
-    const imgWidth = pdfWidth;
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+    const pdfHeight = 297;
+    // Scale down (never crop) when the receipt is taller than one page
+    const fullHeight = (canvas.height * pdfWidth) / canvas.width;
+    const scale = Math.min(1, pdfHeight / fullHeight);
+    const imgWidth = pdfWidth * scale;
+    const imgHeight = fullHeight * scale;
+
+    pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, 0, imgWidth, imgHeight);
     
     // Create blob for preview
     const pdfBlob = pdf.output('blob');

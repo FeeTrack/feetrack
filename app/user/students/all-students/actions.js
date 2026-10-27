@@ -3,20 +3,78 @@
 import { createServerSupabase } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { getUser, checkFeatureLimit } from '@/utils/supabase/supabaseQueries';
+import { getCurrentSession } from '@/utils/session/currentSession';
 
 import { createInvoicesForStudent } from '@/utils/billing/createInvoicesForStudent';
 import { createBulkInvoicesForStudents } from '@/utils/billing/createBulkInvoicesForStudents';
+import { STUDENT_PHOTOS_BUCKET, MAX_PHOTO_BYTES, genders } from '@/utils/constants/students';
+
+// Fields shared by the add and edit forms (personal details, address, admission register ids)
+function parseProfileFields(formData) {
+  const get = (key) => String(formData.get(key) ?? '').trim();
+
+  const gender = get('gender');
+  if (!genders.some(g => g.value === gender)) return { error: 'Gender is required.' };
+
+  const dob = get('dob');
+  if (!dob || isNaN(new Date(dob))) return { error: 'Date of birth is required.' };
+
+  const address = get('address');
+  if (!address) return { error: 'Address is required.' };
+
+  const aadhaar_no = get('aadhaar_no');
+  if (aadhaar_no && !/^\d{12}$/.test(aadhaar_no)) return { error: 'Aadhaar No. must be 12 digits.' };
+
+  const apaar_id = get('apaar_id');
+  if (apaar_id && !/^\d{12}$/.test(apaar_id)) return { error: 'APAAR ID must be 12 digits.' };
+
+  return {
+    fields: {
+      gender,
+      dob,
+      address,
+      aadhaar_no: aadhaar_no || null,
+      apaar_id: apaar_id || null,
+      category: get('category') || null,
+      blood_group: get('blood_group') || null,
+      sr_no: get('sr_no') || null,
+    }
+  };
+}
+
+function getPhoto(formData) {
+  const photo = formData.get('photo');
+  if (!photo || typeof photo === 'string' || photo.size === 0) return { photo: null };
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) return { error: 'Photo must be a JPG, PNG or WebP image.' };
+  if (photo.size > MAX_PHOTO_BYTES) return { error: 'Photo must be 100 KB or smaller.' };
+  return { photo };
+}
+
+// Photos live at <school_id>/<student_id>-<timestamp>.jpg; the timestamp avoids serving a cached old photo after a replace
+async function uploadStudentPhoto(supabase, schoolId, studentId, photo) {
+  const path = `${schoolId}/${studentId}-${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from(STUDENT_PHOTOS_BUCKET)
+    .upload(path, photo, { contentType: photo.type });
+  return { path, error };
+}
 
 export async function createStudentAction(prevState, formData) {
   const profile = await getUser();
+  if (!profile) return { error: 'Not authenticated' };
 
-  const limitCheck = await checkFeatureLimit(profile.school_id, 'staff')
+  const limitCheck = await checkFeatureLimit(profile.school_id, 'students')
   if (!limitCheck.allowed) {
       return { error: { message: 'Student limit reached. Please upgrade your plan to add more students.'}}
   }
 
   const supabase = await createServerSupabase()
-  if (!profile) return { error: 'Not authenticated' };
+
+  const profileFields = parseProfileFields(formData);
+  if (profileFields.error) return { error: profileFields.error };
+
+  const { photo, error: photoError } = getPhoto(formData);
+  if (photoError) return { error: photoError };
 
   const name = String(formData.get('name') ?? '').trim();
   if (!name) return { error: 'Student name is required.' };
@@ -36,7 +94,7 @@ export async function createStudentAction(prevState, formData) {
   const parent_mobile = String(formData.get('parent_mobile') ?? '').trim();
   if (!parent_mobile) return { error: 'parent_mobile contact is required.' };
 
-  const currentSession = JSON.parse(formData.get('session'));
+  const currentSession = await getCurrentSession();
   if (!currentSession) return { error: 'Academic session is required.' };
   const session_id = currentSession.id;
 
@@ -82,7 +140,8 @@ export async function createStudentAction(prevState, formData) {
       adm_date,
       month_fee_from,
       type: 'new',
-      route_id
+      route_id,
+      ...profileFields.fields,
     })
     .select()
     .single();
@@ -97,20 +156,42 @@ export async function createStudentAction(prevState, formData) {
     return { error: "Failed to add student. " + error.message };
   }
 
+  // The student is saved at this point, so later failures are reported as warnings
+  const warnings = [];
+
+  if (photo) {
+    const { path, error: uploadError } = await uploadStudentPhoto(supabase, profile.school_id, student.id, photo);
+    if (uploadError) {
+      warnings.push('Photo could not be uploaded. ' + uploadError.message);
+    } else {
+      await supabase.from('students').update({ photo_path: path }).eq('id', student.id);
+    }
+  }
+
   if (gen_fee) {
     // create invoices for student based on class fee structure
     const error = await createInvoicesForStudent({student, currentSession});
     if (error) {
-      return { error: 'Student added, but failed to generate invoices. ' + error.error };
+      warnings.push('Failed to generate invoices. ' + error.error);
     }
   }
 
   revalidatePath('/user/students');
-  return { student, status: 'success', message: `Successfully Added Student: ${student.name}` };
+  return { student, status: 'success', message: `Successfully Added Student: ${student.name}`, warning: warnings.join(' ') || null };
 }
 
 export async function updateStudentAction(prevState, formData) {
+  const profile = await getUser();
+  if (!profile) return { error: 'Not authenticated' };
+
   const supabase = await createServerSupabase()
+
+  const profileFields = parseProfileFields(formData);
+  if (profileFields.error) return { error: profileFields.error };
+
+  const { photo, error: photoError } = getPhoto(formData);
+  if (photoError) return { error: photoError };
+  const removePhoto = formData.get('remove_photo') === 'true';
 
   const studentId = String(formData.get('studentId') ?? '').trim();
   if (!studentId) {
@@ -133,7 +214,28 @@ export async function updateStudentAction(prevState, formData) {
 
   const route_id = formData.get('routeId') || null;
 
-  // update student with server-side school_id (prevents tampering)
+  const { data: existing, error: fetchError } = await supabase
+    .from('students')
+    .select('photo_path')
+    .eq('id', studentId)
+    .eq('school_id', profile.school_id)
+    .single();
+  if (fetchError || !existing) return { error: 'Student not found.' };
+
+  let photo_path = existing.photo_path;
+  const warnings = [];
+
+  if (photo) {
+    const { path, error: uploadError } = await uploadStudentPhoto(supabase, profile.school_id, studentId, photo);
+    if (uploadError) {
+      warnings.push('Photo could not be uploaded. ' + uploadError.message);
+    } else {
+      photo_path = path;
+    }
+  } else if (removePhoto) {
+    photo_path = null;
+  }
+
   const { data, error } = await supabase
     .from('students')
     .update({
@@ -145,9 +247,12 @@ export async function updateStudentAction(prevState, formData) {
       mother_name: mother_name || null,
       parent_mobile: parent_mobile || null,
       adm_date,
-      route_id
+      route_id,
+      photo_path,
+      ...profileFields.fields,
     })
     .eq('id', studentId)
+    .eq('school_id', profile.school_id)
     .select()
     .single();
 
@@ -155,8 +260,13 @@ export async function updateStudentAction(prevState, formData) {
     return { error: 'Failed to update student. ' + (error.message || '') };
   }
 
+  // Old photo is only removed once the student row points at the new one
+  if (existing.photo_path && existing.photo_path !== photo_path) {
+    await supabase.storage.from(STUDENT_PHOTOS_BUCKET).remove([existing.photo_path]);
+  }
+
   revalidatePath('/user/students');
-  return { student: data, status: 'success', message: `Successfully updated student: ${data.name}` };
+  return { student: data, status: 'success', message: `Successfully updated student: ${data.name}`, warning: warnings.join(' ') || null };
 }
 
 export async function leftOutStudentAction(studentId) {
@@ -187,12 +297,12 @@ export async function filterStudentsAction(prevState, formData) {
   const classId = String(formData.get('class') ?? '').trim();
   if (!classId) { return { error: 'Class is required.' }; }
 
-  const currentSessionId = String(formData.get('currentSession') ?? '').trim();
+  const currentSessionId = (await getCurrentSession())?.id;
   if (!currentSessionId) { return { error: 'Academic session is required.' }; }
 
   const studentsQuery = supabase
     .from('students')
-    .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from, route_id')
+    .select('id, name, adm_no, roll_no, classes(name), sections(name), father_name, mother_name, parent_mobile, class_id, section_id, adm_date, type, status, month_fee_from, route_id, photo_path')
     .eq('school_id', profile.school_id)
     .eq('session_id', currentSessionId)
     .eq('class_id', classId);
@@ -200,11 +310,6 @@ export async function filterStudentsAction(prevState, formData) {
   const sectionId = String(formData.get('section') ?? '').trim();
   if (sectionId) {
     studentsQuery.eq('section_id', sectionId);
-  }
-
-  const studentType = String(formData.get('studentType') ?? '').trim();
-  if (studentType) {
-    studentsQuery.eq('type', studentType);
   }
 
   const studentStatus = String(formData.get('studentStatus') ?? '').trim();
