@@ -1,4 +1,5 @@
 'use client';
+import DateInput from '@/components/DateInput';
 import React, { useState, useEffect, useRef, useActionState } from 'react';
 import toast from "react-hot-toast";
 import ExcelJS from 'exceljs';
@@ -239,25 +240,18 @@ export default function ExpensesClient({profile, expenseTypes: ets, staff: stf, 
                   Record Expense
                 </span>
             </button>
-
-            {profile.role === 'admin' && (
-              <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
-                  <Filter className="w-4 h-4" />
-                  Filter Expenses
-              </button>
-            )}
         </div>
 
         <div className={`w-full overflow-hidden ${showFilter ? 'max-h-60 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
           <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
             <div className="flex flex-col gap-2">
               <label htmlFor="from_date" className="font-semibold">From</label>
-              <input type="date" name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} />
+              <DateInput name="from_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.from_date} onChange={handleFilterChange} />
             </div>
 
             <div className="flex flex-col gap-2">
               <label htmlFor="to_date" className="font-semibold">To</label>
-              <input type="date" name="to_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.to_date} onChange={handleFilterChange} min={filterFormData.from_date} max={currentSession?.end_date} />
+              <DateInput name="to_date" className="border rounded px-2 py-1 max-w-fit hover:border hover:border-secondary" value={filterFormData.to_date} onChange={handleFilterChange} min={filterFormData.from_date} max={currentSession?.end_date} />
             </div>
 
             <div className="flex flex-col gap-2">

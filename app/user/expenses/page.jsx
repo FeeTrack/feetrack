@@ -4,6 +4,7 @@ import { createServerSupabase } from '@/utils/supabase/server';
 import UserLayout from "../UserLayout";
 import ExpensesClient from "./ExpensesClient";
 import { redirect } from "next/navigation";
+import { getCurrentSession } from "@/utils/session/currentSession";
 
 export const metadata = {
     title: 'Expenses | FeeTrack',
@@ -39,11 +40,7 @@ export default async function ExpensesPage() {
         .select('id, name, salary')
         .eq('school_id', profile.school_id);
 
-    const { data: currentSession } = await supabase
-        .from('academic_sessions')
-        .select('id')
-        .eq('is_active', true)
-        .single();
+    const currentSession = await getCurrentSession();
 
     const {data: recent_expenses}  = await supabase
         .from('expenses')

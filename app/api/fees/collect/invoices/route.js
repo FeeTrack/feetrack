@@ -10,35 +10,42 @@ export async function GET(req) {
         if (!studentId) return NextResponse.json({ error: 'Missing Student ID' }, { status: 400 });
         if (!sessionId) return NextResponse.json({ error: 'Missing Session ID' }, { status: 400 });
 
-        const supabase = await createServerSupabase();
-        const profile = await getUser();
+        const [supabase, profile] = await Promise.all([createServerSupabase(), getUser()]);
         if (!profile) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        const { data: invoices, error: invError } = await supabase
-            .from('invoices')
-            .select('id, pay_period, status, amount, amount_paid')
-            .eq('session_id', sessionId)
-            .eq('school_id', profile.school_id)
-            .eq('student_id', studentId);
+        // The three lookups are independent, so run them together instead of one after another
+        const [
+            { data: invoices, error: invError },
+            { data: totalDiscounts, error: tdError },
+            { data: invoiceItems, error: invItmError },
+        ] = await Promise.all([
+            supabase
+                .from('invoices')
+                .select('id, pay_period, status, amount, amount_paid')
+                .eq('session_id', sessionId)
+                .eq('school_id', profile.school_id)
+                .eq('student_id', studentId),
+            supabase
+                .from('discounts')
+                .select('amount')
+                .eq('session_id', sessionId)
+                .eq('student_id', studentId),
+            // Limited to this session's invoices; pending items from other sessions don't belong here
+            supabase
+                .from('invoice_items')
+                .select('id, invoice_id, fee_heads(id, name), amount, amount_paid, status, period_key, is_late_fee, period_start_end(period_start, period_end), payment_items(discounts(amount)), invoices!inner(session_id)')
+                .eq('student_id', studentId)
+                .eq('invoices.session_id', sessionId)
+                .eq('status', 'pending'),
+        ]);
 
-        if (invError ) return NextResponse.json({error: ('Inv Error: ' + invError.message)}, { status: 500 });
+        if (invError) return NextResponse.json({ error: 'Inv Error: ' + invError.message }, { status: 500 });
+        if (tdError) return NextResponse.json({ error: 'Error fetching total discounts: ' + tdError.message }, { status: 500 });
+        if (invItmError) return NextResponse.json({ error: invItmError.message }, { status: 500 });
+
         if (invoices.length === 0) {
             return NextResponse.json({error: 'Fee Struture not created for the selected student. Please first create the fee structure.'}, { status: 404 });
         }
-
-        const { data: totalDiscounts, error: tdError } = await supabase
-            .from('discounts')
-            .select('amount')
-            .eq('session_id', sessionId)
-            .eq('student_id', studentId);
-        if (tdError) return NextResponse.json({ error: 'Error fetching total discounts: ' + tdError.message }, { status: 500 });
-
-         const { data: invoiceItems, error: invItmError } = await supabase
-            .from('invoice_items')
-            .select('id, invoice_id, fee_heads(id, name), amount, amount_paid, status, period_key, is_late_fee, period_start_end(period_start, period_end), payment_items(discounts(amount))')
-            .eq('student_id', studentId)
-            .eq('status', 'pending');
-        if (invItmError) return NextResponse.json({ error: invItmError.message }, { status: 500 });
 
         return NextResponse.json({ invoices: invoices ?? [], totalDiscounts: totalDiscounts ?? [], invoiceItems: invoiceItems ?? [] }, { status: 200 });
     } catch (error) {

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useActionState } from "react";
+import { useRouter } from "next/navigation";
 import { createClientSupabase } from '@/utils/supabase/client';
+import { STUDENT_PHOTOS_BUCKET } from '@/utils/constants/students';
 import toast from 'react-hot-toast';
 import ExcelJS from 'exceljs';
 
@@ -10,8 +12,6 @@ import { updateStudentFeeStructure } from "@/utils/billing/updateStudentFeeStruc
 import { leftOutStudentAction } from "./actions";
 import { checkFeatureLimit, checkFeatureAccess } from "@/utils/supabase/supabaseQueries";
 
-import AddStudentForm from "./AddStudentForm";
-import EditStudentForm from "./EditStudentForm";
 import Modal from "@/components/Modal";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSession } from "@/Context/SessionContext";
@@ -22,25 +22,22 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Download, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff, ArrowLeft, ArrowRight, File } from "lucide-react";
+import { Plus, Search, Download, Eye, Edit, Trash2, Filter, Menu, IndianRupee, EyeOff, ArrowLeft, ArrowRight, File } from "lucide-react";
 import BulkUpload from "./BulkUpload";
 
-export default function StudentsClient({ profile, schoolType, recentAdmissions, showAdd: initialShowAdd }) {
+export default function StudentsClient({ profile, schoolType, recentAdmissions }) {
+  const router = useRouter();
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [transportRoutes, setTransportRoutes] = useState([]);
-  const [admNo, setAdmNo] = useState('');
-  
+
   const [students, setStudents] = useState(recentAdmissions || []);
   const [hasFilteredStudents, setHasFilteredStudents] = useState(false);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [showAdd, setShowAdd] = useState(initialShowAdd || false);
-  const [showEdit, setShowEdit] = useState(false);
   const [showFilter, setShowFilter] = useState(false)
-  const [editStudent, setEditStudent] = useState(null);
   const [showConfirmLeftOut, setShowConfirmLeftOut] = useState(false);
   const [leftOutStudent, setLeftOutStudent] = useState(null);
   const [showBulk, setShowBulk] = useState(false);
@@ -112,60 +109,18 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
     fetchTransportRoutes();
   }, [])
 
-  useEffect(() => {
-    if (!showAdd) return;
-    async function fetchAdmNo() {
-      const { data: admissionNo } = await supabase
-        .from('students')
-        .select('adm_no')
-        .eq('school_id', profile.school_id)
-        .order('adm_no', { ascending: false })
-        .limit(1);
-      setAdmNo((admissionNo.length === 0 ? 1 : admissionNo[0].adm_no + 1));
-    }
-    fetchAdmNo();
-  }, [showAdd]);
-
   const modalRef = useRef();
-  const scrollModalTop = () => {
-    if (modalRef.current) {
-      modalRef.current.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }
 
   useEffect(() => {
     if (hasFilteredStudents) return;
     setStudents(recentAdmissions);
   }, [recentAdmissions]);
 
-  const handleSubmit = (state) => {
-    scrollModalTop()
-    setShowEdit(false)
-    setEditStudent(null)
-    if (state?.status === 'success') {
-      toast.success(state.message);
-      return;
-    }
-    if (state?.error) {
-      if (state.error.message) {
-        toast.error(state.error.message)
-      } else {
-        toast.error('Failed to add student.');
-        console.error(state.error)
-      }
-    }
-  }
-
   const [filterFormData, setFilterFormData] = useState({
     class: '',
     section: '',
-    studentType: '',    
+    studentStatus: '',
   })
-
-  const studentTypes = [
-    { label: 'New', value: 'new' },
-    { label: 'Old', value: 'promoted' }
-  ]
 
   const studentStatuses = [
     { label: 'Active', value: 'active' },
@@ -190,8 +145,8 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
       toast.error('Student limit reached. Please upgrade your plan to add more students.')
       return
     }
-    
-    setShowAdd(true);
+
+    router.push('/user/students/add-student');
   }
 
   const handleBulkAdd = async () => {
@@ -215,16 +170,9 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
   useEffect(() => {
     if (state.filteredStudentsResponse) {
-      if (filterFormData.studentType) {
-        const typeFiltered = state.filteredStudentsResponse?.filter(s => s.type === filterFormData.studentType);
-        setHasFilteredStudents(true);
-        setFilteredStudents(typeFiltered);
-        setStudents(typeFiltered);
-      } else {
-        setHasFilteredStudents(true);
-        setFilteredStudents(state.filteredStudentsResponse);
-        setStudents(state.filteredStudentsResponse || []);
-      }
+      setHasFilteredStudents(true);
+      setFilteredStudents(state.filteredStudentsResponse);
+      setStudents(state.filteredStudentsResponse || []);
     } else if (state.error) {
       toast.error(state.error);
     }
@@ -234,11 +182,20 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
     setFilterFormData({
       class: '',
       section: '',
-      studentType: '',
+      studentStatus: '',
     });
     setHasFilteredStudents(false);
     setStudents(recentAdmissions);
   }
+
+  // Filter results belong to the old session; the refreshed recent admissions replace them
+  const sessionIdRef = useRef(currentSession?.id);
+  useEffect(() => {
+    if (sessionIdRef.current === currentSession?.id) return;
+    sessionIdRef.current = currentSession?.id;
+    clearFilters();
+    setPageNo(1);
+  }, [currentSession?.id]);
 
   const handleUpdateFeeStructure = async (student) => {
     const toastId = toast.loading("Updating fee structure...");
@@ -306,7 +263,7 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
         adm_no: s.adm_no,
         roll_no: s.roll_no,
         mobile_no: s.parent_mobile,
-        adm_date: s.adm_date
+        adm_date: s.adm_date ? new Date(s.adm_date).toLocaleDateString('en-IN') : ''
       });
 
       row.eachCell((cell) => {
@@ -362,6 +319,11 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
         return
       }
 
+      const photoPath = students.find(s => s.id === studentId)?.photo_path;
+      if (photoPath) {
+        await supabase.storage.from(STUDENT_PHOTOS_BUCKET).remove([photoPath]);
+      }
+
       toast.success(`Successfully Deleted Student: ${studentName}`);
       setStudents(prev => prev.filter(s => s.id !== studentId));
   } catch (error) {
@@ -399,7 +361,6 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
 
       <div className={`w-full overflow-hidden ${showFilter ? 'max-h-60 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>
         <form action={filterAction} className="flex items-center gap-4 flex-wrap" id="filterForm">
-          {currentSession?.id && <input type="hidden" name="currentSession" value={currentSession.id} />}
 
           <div className="flex flex-col gap-2 justify-start">
             <label className="font-semibold">Class</label>
@@ -432,18 +393,6 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
               {studentStatuses.map(status => (
                 <option key={status.value} value={status.value} className='text-black'>
                   {status.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2 justify-start">
-            <label className="font-semibold">Type</label>
-            <select name="studentType" className="border rounded px-2 py-1 hover:border hover:border-secondary z-10" value={filterFormData.studentType} onChange={handleFilterChange}>
-              <option value='' className="text-black"></option>
-              {studentTypes.map(type => (
-                <option key={type.value} value={type.value} className='text-black'>
-                  {type.label}
                 </option>
               ))}
             </select>
@@ -543,14 +492,23 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
                           <TableCell className='text-right pr-6'>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                  <button className='p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200' onClick={() => {setEditStudent(s); setShowEdit(true);}}>
+                                  <button className='p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200'>
                                     <Menu className="h-4 w-4" />
                                   </button>
                               </DropdownMenuTrigger>
 
                               <DropdownMenuContent align="end">
                                   <DropdownMenuItem className='p-0'>
-                                    <button className='hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 w-full p-1 rounded-md' onClick={() => {setEditStudent(s); setShowEdit(true);}}>
+                                    <button className='hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 w-full p-1 rounded-md' onClick={() => router.push(`/user/students/${s.id}/admission-form`)}>
+                                      <span className="flex items-center gap-1">
+                                        <Eye className="h-4 w-4 text-inherit" /> View / Print
+                                      </span>
+                                    </button>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+
+                                  <DropdownMenuItem className='p-0'>
+                                    <button className='hover:bg-secondary hover:text-secondary-foreground transition-all duration-200 w-full p-1 rounded-md' onClick={() => router.push(`/user/students/${s.id}/edit`)}>
                                       <span className="flex items-center gap-1">
                                         <Edit className="h-4 w-4 text-inherit" /> Edit
                                       </span>
@@ -645,19 +603,6 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
       )}
       
       {/* Modals */}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Student" ref={modalRef}>
-        <AddStudentForm 
-          onCancel={() => setShowAdd(false)}
-          onSubmit={handleSubmit}
-          currentSession={currentSession}
-          classes={classes}
-          admNo={admNo}
-          sections={sections}
-          schoolType={schoolType}
-          transportRoutes={transportRoutes}
-        />
-      </Modal>
-
       <Modal open={showBulk} onClose={() => setShowBulk(false)} title='Bulk Insert Students' ref={modalRef}>
         <BulkUpload
           onCancel={() => setShowBulk(false)}
@@ -667,21 +612,6 @@ export default function StudentsClient({ profile, schoolType, recentAdmissions, 
           profile={profile}
           currentSession={currentSession}
         />
-      </Modal>
-
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Edit Student">
-        {editStudent && (
-          <EditStudentForm 
-            student={editStudent}
-            onSubmit={handleSubmit}
-            onCancel={() => {
-                setShowEdit(false)
-                setEditStudent(null)
-            }}
-            classes={classes}
-            sections={sections}
-          />
-        )}
       </Modal>
     </div>
   </div>

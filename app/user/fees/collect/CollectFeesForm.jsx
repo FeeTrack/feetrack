@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
 
-import { downloadReceipt } from '@/utils/receipt/buildReceipt';
+import { downloadReceipt, openReceiptWindow } from '@/utils/receipt/buildReceipt';
 import Spinner from '@/components/Spinner';
 
 export default function CollectFeesForm({ student, onCancel, payPeriods, invoiceItems, totalFeesAmount, totalFine, totalPaid, totalDiscount }) {
@@ -199,16 +199,22 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
     return acc;
   }, { amount: 0, amount_paid: 0, receiving: 0, discount: 0, balance: 0 });
 
-  async function handlePostPayment(paymentId) {
+  async function printReceipt(data, receiptWindow) {
     try {
-      const res = await fetch(`/api/fees/collect/receipt-details?payment_id=${paymentId}`);
-      const payload = await res.json();
-      if (!res.ok || payload?.error) {
-        console.error('Failed to fetch payment details for printing' + (payload?.error || res.statusText));
-        return;
-      } 
-      downloadReceipt(payload).catch(e => console.error('Print error:', e));
+      let payload = data.receipt;
+      if (!payload) {
+        // Payment API couldn't build the receipt; fetch it separately
+        const res = await fetch(`/api/fees/collect/receipt-details?payment_id=${data.paymentId}`);
+        payload = await res.json();
+        if (!res.ok || payload?.error) {
+          console.error('Failed to fetch payment details for printing' + (payload?.error || res.statusText));
+          receiptWindow?.close();
+          return;
+        }
+      }
+      downloadReceipt(payload, receiptWindow).catch(e => console.error('Print error:', e));
     } catch (e) {
+      receiptWindow?.close();
       console.error('print error', e);
     }
   }
@@ -264,7 +270,9 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
       setLoading(false);
       return;
     }
-    
+
+    // Open the receipt tab now, while we're still inside the click, so it isn't popup-blocked
+    const receiptWindow = openReceiptWindow();
 
     const res = await fetch('/api/fees/collect/payment', {
       method: 'POST',
@@ -282,23 +290,23 @@ export default function CollectFeesForm({ student, onCancel, payPeriods, invoice
     });
     if (!res.ok) {
       setLoading(false);
+      receiptWindow?.close();
       const errorData = await res.json();
       toast.error('Payment failed: ' + (errorData?.error || res.statusText));
       return;
     }
-    
+
     const data = await res.json();
 
     setLoading(false);
     toast.success('Payment recorded successfully.');
 
     if (data?.paymentId) {
-      await handlePostPayment(data.paymentId);
-
-      onCancel();
+      await printReceipt(data, receiptWindow);
     } else {
-      onCancel();
+      receiptWindow?.close();
     }
+    onCancel();
   };
 
   return (

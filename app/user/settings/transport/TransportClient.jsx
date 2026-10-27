@@ -227,20 +227,12 @@ export default function TransportClient({profile, transportRoutes: inital}) {
                           <div className="flex justify-end gap-2">
                             <button className='p-1 rounded hover:bg-secondary hover:text-secondary-foreground transition-all duration-200'
                               onClick={() => {
-                                if (profile.role !== 'admin') {
-                                  toast.error('Sorry, you do not have access to this feature.')
-                                  return
-                                }
                                 setEditTransportRoute(t); setShowEdit(true);}}
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button className='p-1 rounded hover:bg-red-400 hover:text-secondary-foreground transition-all duration-200'
                               onClick={() => {
-                                if (profile.role !== 'admin') {
-                                  toast.error('Sorry, you do not have access to this feature.')
-                                  return
-                                }
                                 setDeleteTransportRoute(t); setOpenDelete(true)}}
                             >
                               <Trash2 className="h-4 w-4" />

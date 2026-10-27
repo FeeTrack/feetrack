@@ -38,7 +38,7 @@ const ToolHeader = ({pageName, profile}) => {
     };
 
     return (
-        <header className="sticky top-0 flex h-14 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-4 shadow-sm sm:px-6 lg:px-8 z-10 ">
+        <header className="sticky top-0 print:hidden flex h-14 shrink-0 items-center justify-between gap-x-2 border-b border-gray-300 bg-white px-4 shadow-sm sm:px-6 lg:px-8 z-10 ">
             <div className="flex items-center gap-x-2 xs:gap-x-4">
                 <button type="button" className='lg:hidden' onClick={() => setIsSheetOpen(true)}>
                     <Menu className="h-5 w-5"/>

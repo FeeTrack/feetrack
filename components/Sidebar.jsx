@@ -21,11 +21,11 @@ const navigation = [
     ] },
     { name: 'Payments', href: '/user/payments', icon: CreditCard },
     { name: 'Expenses', href: '/user/expenses', icon: WalletCards },
-    { name: 'Staff', adminOnly: true, href: '/user/staff', icon: UserSquare },
+    { name: 'Staff', href: '/user/staff', icon: UserSquare },
     { name: 'Settings', icon: Settings, submenu: [
         { name: 'Classes & Sections', href: '/user/settings/classes-sections' },
         { name: 'Fees Setup', adminOnly: true, href: '/user/settings/fees-setup' },
-        { name: 'Transport', adminOnly: true, href: '/user/settings/transport' },
+        { name: 'Transport', href: '/user/settings/transport' },
         { name: 'Expense Types', href: '/user/settings/expense-types' },
     ] },
 ]

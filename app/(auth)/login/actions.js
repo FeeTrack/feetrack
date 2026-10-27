@@ -2,6 +2,7 @@
 'use server';
 import { createServerSupabase } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { clearSelectedSession } from '@/utils/session/currentSession';
 
 export async function loginAction(prevState , formData) {
   const email = String(formData.get('email') ?? '');
@@ -43,6 +44,9 @@ export async function loginAction(prevState , formData) {
       return { error: {code: 'PLAN_EXPIRED'}};
     }
   }
+
+  // every login starts on the session marked active in Supabase
+  await clearSelectedSession();
 
   // on success, redirect to dashboard (session cookies are set by the server client)
   redirect('/user/dashboard');

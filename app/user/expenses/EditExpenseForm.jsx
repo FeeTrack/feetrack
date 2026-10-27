@@ -1,4 +1,5 @@
 'use client';
+import DateInput from '@/components/DateInput';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
 import toast from 'react-hot-toast';
@@ -159,7 +160,7 @@ export default function EditExpenseForm({ profile, expense, expenseTypes, staff,
 
             <div>
               <label className="block text-sm mb-1">Expense Date</label>
-              <input name="expenseDate" type='date' value={formData.expenseDate} onChange={handleChange} className="w-full border rounded px-2 py-1" min={currentSession.start_date} max={currentSession.end_date} />
+              <DateInput name="expenseDate" value={formData.expenseDate} onChange={handleChange} className="w-full border rounded px-2 py-1" min={currentSession.start_date} max={currentSession.end_date} />
             </div>
             {clientErrors.expenseDate && (
               <p className='text-red-600 text-xs mt-1'>{clientErrors.expenseDate}</p>
