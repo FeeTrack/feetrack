@@ -345,6 +345,11 @@ export default function PaymentsClient({ profile, recentPayments, classes = [], 
                         <Plus className="w-4 h-4" />
                         Add Payment                            
                     </Link>
+
+                    <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
+                        <Filter className="w-4 h-4" />
+                        Filter Payments
+                    </button>
                 </div>
 
                 <div className={`w-full overflow-hidden ${showFilter ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'} transition-all duration-300`}>

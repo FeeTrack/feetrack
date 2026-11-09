@@ -234,11 +234,14 @@ export default function ExpensesClient({profile, expenseTypes: ets, staff: stf, 
     <div className="space-y-6 w-full max-w-full">
       <div className='flex flex-col'>
         <div className='w-full flex items-center gap-4 flex-wrap'>
-            <button className="primary-btn" onClick={() => setShowAdd(true)}>
-                <span className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Record Expense
-                </span>
+            <button className="primary-btn flex items-center gap-2" onClick={() => setShowAdd(true)}>
+                <Plus className="w-4 h-4" />
+                Record Expense
+            </button>
+
+            <button type="button" className="primary-btn flex items-center gap-2" onClick={() => setShowFilter(prev => !prev)}>
+                <Filter className="w-4 h-4" />
+                Filter Expenses
             </button>
         </div>
 

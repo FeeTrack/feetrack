@@ -8,6 +8,7 @@ import { genders } from '@/utils/constants/students';
 
 import UserLayout from '../../../UserLayout';
 import PrintButton from '@/components/PrintButton';
+import { FieldGrid, SectionTitle } from '@/components/PrintFields';
 
 export const metadata = {
   title: 'Staff Details | FeeTrack',
@@ -19,32 +20,6 @@ const formatDate = (date) => date
   : null;
 
 const formatAadhaar = (no) => no ? no.replace(/(\d{4})(?=\d)/g, '$1 ') : null;
-
-const formatSalary = (salary) => salary != null
-  ? Number(salary).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : null;
-
-function SectionTitle({ children }) {
-  return (
-    <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary mb-2">
-      <span className="h-3.5 w-1 rounded-full bg-primary" />
-      {children}
-    </h3>
-  );
-}
-
-function FieldGrid({ fields }) {
-  return (
-    <dl className="grid grid-cols-2 border border-gray-300 rounded-md overflow-hidden">
-      {fields.map(({ label, value, full }, i) => (
-        <div key={label} className={`flex border-gray-300 border-b -mb-px ${full ? 'col-span-2' : i % 2 === 0 ? 'border-r' : ''}`}>
-          <dt className="w-36 shrink-0 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 border-r border-gray-300">{label}</dt>
-          <dd className="px-3 py-2 text-sm font-semibold text-gray-900">{value || '—'}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 export default async function StaffDetailsPage({ params }) {
   const { id } = await params;
@@ -71,18 +46,15 @@ export default async function StaffDetailsPage({ params }) {
 
   const photoUrl = await getSignedPhotoUrl(staff.photo_path);
 
-  const keyFacts = [
-    { label: 'Designation', value: staff.designation },
-    { label: 'Joining Date', value: formatDate(staff.joining_date) },
-    { label: 'Monthly Salary', value: formatSalary(staff.salary) },
-    { label: 'Qualification', value: staff.qualification },
-  ];
-
+  // Same arrangement as the staff form: basic and personal details beside the photo, contact below
   const personalFields = [
     { label: 'Staff Name', value: staff.name, full: true },
+    { label: 'Designation', value: staff.designation },
     { label: 'Gender', value: genders.find(g => g.value === staff.gender)?.label },
+    { label: 'Joining Date', value: formatDate(staff.joining_date) },
     { label: 'Date of Birth', value: formatDate(staff.dob) },
-    { label: 'Aadhaar No.', value: formatAadhaar(staff.aadhaar_no), full: true },
+    { label: 'Aadhaar No.', value: formatAadhaar(staff.aadhaar_no) },
+    { label: 'Qualification', value: staff.qualification },
   ];
 
   const contactFields = [
@@ -111,7 +83,7 @@ export default async function StaffDetailsPage({ params }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10 print:p-0 print:border-0 print:shadow-none print:rounded-none">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10 print:p-0 print:border-0 print:shadow-none print:rounded-none print:flex print:flex-col print:min-h-[265mm]">
           {/* School header */}
           <header className="text-center pb-4 border-b-4 border-double border-primary">
             <h1 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-wide text-gray-900">{school?.name}</h1>
@@ -122,32 +94,25 @@ export default async function StaffDetailsPage({ params }) {
             <span className="rounded-md bg-primary px-4 py-1.5 text-sm font-bold uppercase tracking-[0.2em] text-white">Staff Details</span>
           </div>
 
-          {/* Key facts + photo */}
-          <div className="flex gap-6 mb-6">
-            <dl className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3 content-start">
-              {keyFacts.map(({ label, value }) => (
-                <div key={label} className="border-b border-dotted border-gray-400 pb-1">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
-                  <dd className="text-base font-bold text-gray-900">{value || '—'}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="w-[30mm] h-[40mm] shrink-0 border-2 border-gray-400 rounded-md overflow-hidden bg-gray-50 flex items-center justify-center">
-              {photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photoUrl} alt={staff.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center text-gray-400">
-                  <User className="w-8 h-8" />
-                  <span className="text-[10px] mt-1">Affix Photo</span>
-                </div>
-              )}
-            </div>
-          </div>
-
+          {/* Basic & personal details beside the photo */}
           <section className="mb-6">
-            <SectionTitle>Personal Details</SectionTitle>
-            <FieldGrid fields={personalFields} />
+            <SectionTitle>Basic &amp; Personal Details</SectionTitle>
+            <div className="flex gap-4 items-start">
+              <div className="flex-1 min-w-0">
+                <FieldGrid fields={personalFields} />
+              </div>
+              <div className="w-[30mm] h-[40mm] shrink-0 border-2 border-gray-400 rounded-md overflow-hidden bg-gray-50 flex items-center justify-center">
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoUrl} alt={staff.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400">
+                    <User className="w-8 h-8" />
+                    <span className="text-[10px] mt-1">Affix Photo</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
 
           <section className="mb-6">
@@ -156,7 +121,8 @@ export default async function StaffDetailsPage({ params }) {
           </section>
 
           {/* Signatures */}
-          <div className="flex justify-between items-end mt-20">
+          {/* On paper, pushed to the bottom of the A4 page */}
+          <div className="flex justify-between items-end mt-20 print:mt-auto print:pt-16">
             <div className="w-48 border-t-2 border-gray-700 pt-1 text-center text-sm font-semibold text-gray-800">Staff Signature</div>
             <div className="w-48 border-t-2 border-gray-700 pt-1 text-center text-sm font-semibold text-gray-800">Principal&apos;s Signature</div>
           </div>

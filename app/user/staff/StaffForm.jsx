@@ -19,16 +19,16 @@ export default function StaffForm({ mode, staff, photoUrl }) {
 
   const [formData, setFormData] = useState({
     name: staff?.name ?? '',
+    designation: staff?.designation ?? '',
     gender: staff?.gender ?? '',
+    joining_date: staff?.joining_date ?? today,
+    mobile_no: staff?.mobile_no ?? '',
     dob: staff?.dob ?? '',
     aadhaar_no: staff?.aadhaar_no ?? '',
     qualification: staff?.qualification ?? '',
-    mobile_no: staff?.mobile_no ?? '',
+    salary: staff?.salary ?? '',
     email: staff?.email ?? '',
     address: staff?.address ?? '',
-    designation: staff?.designation ?? '',
-    joining_date: staff?.joining_date ?? today,
-    salary: staff?.salary ?? '',
   });
 
   const handleChange = (e) => {
@@ -58,7 +58,8 @@ export default function StaffForm({ mode, staff, photoUrl }) {
     <form action={handleSubmit} className="space-y-5 max-w-5xl">
       {isEdit && <input type="hidden" name="staff_id" value={staff.id} />}
 
-      <Section title="Personal Details">
+      {/* Most-used details first, beside the photo */}
+      <Section title="Basic & Personal Details">
         <div className="flex flex-col md:flex-row gap-6">
           <PhotoUpload initialUrl={photoUrl} onChange={setPhoto} onBusyChange={setProcessingPhoto} />
 
@@ -67,11 +68,23 @@ export default function StaffForm({ mode, staff, photoUrl }) {
               <input name="name" required value={formData.name} onChange={handleChange} className={inputClass} />
             </Field>
 
+            <Field label="Designation" required>
+              <input name="designation" required placeholder="e.g. Teacher, Driver" value={formData.designation} onChange={handleChange} className={inputClass} />
+            </Field>
+
             <Field label="Gender" required>
               <select name="gender" required value={formData.gender} onChange={handleChange} className={inputClass}>
                 <option value="">Select Gender</option>
                 {genders.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
               </select>
+            </Field>
+
+            <Field label="Joining Date" required>
+              <DateInput name="joining_date" required value={formData.joining_date} onChange={handleChange} className={inputClass} />
+            </Field>
+
+            <Field label="Monthly Salary">
+              <input name="salary" type="number" min="0" value={formData.salary} onChange={handleChange} className={inputClass} />
             </Field>
 
             <Field label="Date of Birth">
@@ -82,7 +95,7 @@ export default function StaffForm({ mode, staff, photoUrl }) {
               <input name="aadhaar_no" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} title="12-digit Aadhaar number" value={formData.aadhaar_no} onChange={handleChange} className={inputClass} />
             </Field>
 
-            <Field label="Qualification">
+            <Field label="Qualification" className="sm:col-span-2">
               <input name="qualification" placeholder="e.g. M.Sc., B.Ed." value={formData.qualification} onChange={handleChange} className={inputClass} />
             </Field>
           </div>
@@ -101,22 +114,6 @@ export default function StaffForm({ mode, staff, photoUrl }) {
 
           <Field label="Address" className="sm:col-span-2">
             <textarea name="address" rows={2} value={formData.address} onChange={handleChange} className={inputClass} />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Employment Details">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Designation" required>
-            <input name="designation" required placeholder="e.g. Teacher, Driver" value={formData.designation} onChange={handleChange} className={inputClass} />
-          </Field>
-
-          <Field label="Joining Date" required>
-            <DateInput name="joining_date" required value={formData.joining_date} onChange={handleChange} className={inputClass} />
-          </Field>
-
-          <Field label="Monthly Salary">
-            <input name="salary" type="number" min="0" value={formData.salary} onChange={handleChange} className={inputClass} />
           </Field>
         </div>
       </Section>
