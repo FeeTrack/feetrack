@@ -7,6 +7,7 @@ import { genders } from '@/utils/constants/students';
 
 import UserLayout from '../../../UserLayout';
 import PrintButton from '@/components/PrintButton';
+import { FieldGrid, SectionTitle } from '@/components/PrintFields';
 import { getStudentPhotoUrl } from '../../formData';
 
 export const metadata = {
@@ -19,28 +20,6 @@ const formatDate = (date) => date
   : null;
 
 const formatAadhaar = (no) => no ? no.replace(/(\d{4})(?=\d)/g, '$1 ') : null;
-
-function SectionTitle({ children }) {
-  return (
-    <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary mb-2">
-      <span className="h-3.5 w-1 rounded-full bg-primary" />
-      {children}
-    </h3>
-  );
-}
-
-function FieldGrid({ fields }) {
-  return (
-    <dl className="grid grid-cols-2 border border-gray-300 rounded-md overflow-hidden">
-      {fields.map(({ label, value, full }, i) => (
-        <div key={label} className={`flex border-gray-300 border-b -mb-px ${full ? 'col-span-2' : i % 2 === 0 ? 'border-r' : ''}`}>
-          <dt className="w-36 shrink-0 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 border-r border-gray-300">{label}</dt>
-          <dd className="px-3 py-2 text-sm font-semibold text-gray-900">{value || '—'}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 export default async function AdmissionFormPage({ params }) {
   const { id } = await params;
@@ -113,7 +92,7 @@ export default async function AdmissionFormPage({ params }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10 print:p-0 print:border-0 print:shadow-none print:rounded-none">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10 print:p-0 print:border-0 print:shadow-none print:rounded-none print:flex print:flex-col print:min-h-[265mm]">
           {/* School header */}
           <header className="text-center pb-4 border-b-4 border-double border-primary">
             <h1 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-wide text-gray-900">{school?.name}</h1>
@@ -161,7 +140,8 @@ export default async function AdmissionFormPage({ params }) {
           </section>
 
           {/* Signatures */}
-          <div className="flex justify-between items-end mt-20">
+          {/* On paper, pushed to the bottom of the A4 page */}
+          <div className="flex justify-between items-end mt-20 print:mt-auto print:pt-16">
             <div className="w-48 border-t-2 border-gray-700 pt-1 text-center text-sm font-semibold text-gray-800">Parent / Guardian&apos;s Signature</div>
             <div className="w-48 border-t-2 border-gray-700 pt-1 text-center text-sm font-semibold text-gray-800">Principal&apos;s Signature</div>
           </div>

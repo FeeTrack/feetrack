@@ -38,15 +38,26 @@ export default async function StaffPage() {
         )
     }
 
-    const {data: staff }  = await supabase
+    const {data: staff, error: staffError }  = await supabase
         .from('staff')
         .select('id, name, designation, gender, mobile_no, salary, joining_date')
         .eq('school_id', profile.school_id)
-        .order('created_at', { ascending: false});
+        .order('name', { ascending: true });
+
+    if ( staffError ) {
+        console.error('Error fetching staff:', staffError.message);
+        return (
+            <UserLayout pageName='Staff'>
+                <div className="w-full h-full flex justify-center items-center">
+                    <h1>Error fetching staff data. Please try again later.</h1>
+                </div>
+            </UserLayout>
+        )
+    }
         
     return (
         <UserLayout pageName='Staff'>
-            <StaffClient profile={profile} staff={staff} />
+            <StaffClient profile={profile} staff={staff ?? []} />
         </UserLayout>
     )
 }
